@@ -17,6 +17,7 @@ import {
   measurementReviews,
   measurements,
   outboxMessages,
+  users,
   workspaces,
 } from "@/db/schema";
 import { loadWorkspaceContext, requireCareAccess, type WorkspaceContext } from "../services/authz";
@@ -43,7 +44,7 @@ import {
   submitAssessmentResult,
   type PersonScope,
 } from "../services/personAccess";
-import { login, registerProfessional } from "../services/accounts";
+import { login, markTutorialSeen, registerProfessional } from "../services/accounts";
 import { recordReleaseDecision } from "../services/admin";
 import { createWorkspace } from "../services/workspaces";
 import { assertProtocolExecutable, redactSecrets } from "../services/core";
@@ -541,6 +542,35 @@ describe("e-mail confirmado e convites", () => {
     const ctx = await loadWorkspaceContext(db, s.diego.id, ws.id);
     expect(() => assertCanInvite({ ...ctx, emailVerified: false })).toThrow(/Confirme seu e-mail/);
     expect(() => assertCanInvite(ctx)).not.toThrow();
+  });
+});
+
+describe("tutorial de boas-vindas", () => {
+  it("abre para conta nova e, depois de visto, guarda só a primeira data", async () => {
+    const { user } = await registerProfessional(
+      db,
+      {
+        name: "Nova Fisioterapeuta",
+        email: "nova.fisio@moveo.test",
+        password: "senha-de-teste-123",
+        profession: "fisioterapia",
+        councilRegion: "3",
+        registrationNumber: "000002-F",
+        jurisdictionUf: "SP",
+        workspaceName: "Consultório Novo",
+        workspaceKind: "autonomo",
+      },
+      BASE
+    );
+    const seenAt = async () => (await db.select({ at: users.tutorialSeenAt }).from(users).where(eq(users.id, user.id)))[0].at;
+    expect(await seenAt()).toBeNull();
+
+    await markTutorialSeen(db, user.id);
+    const first = await seenAt();
+    expect(first).toBeInstanceOf(Date);
+
+    await markTutorialSeen(db, user.id);
+    expect(await seenAt()).toEqual(first);
   });
 });
 

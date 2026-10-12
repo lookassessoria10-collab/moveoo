@@ -17,6 +17,7 @@ Ciclo verificado de ponta a ponta no navegador e por testes automatizados:
 8. Profissional revisa cada medida (aceitar, corrigir com justificativa, descartar), publica a devolutiva (versionada) e pode incluir as medidas revisadas.
 9. A pessoa vê o retorno. O profissional solicita reavaliação; a comparação explica incompatibilidades.
 10. Também: medição presencial (goniômetro, inclinômetro…), relatório para impressão/PDF, painel "Hoje", equipe e vínculos, administração (verificação manual, liberação por recurso, auditoria).
+11. Tutorial de boas-vindas no painel: pop-ups em passos que explicam o ciclo principal e destacam no menu onde fica cada coisa (`components/platform/Tutorial.tsx`, textos em `tutorialSteps.tsx`). Abre sozinho na primeira visita a "Hoje" de uma conta nova; concluir, pular ou fechar grava `users.tutorial_seen_at`. Reabre pelo botão "Como funciona", no menu. Os passos seguem a profissão (paciente/aluno) e o papel (assistente não vê os passos de avaliação). Contas que já existiam quando a coluna foi criada ficaram marcadas como vistas.
 
 ## 2. Decisões técnicas
 

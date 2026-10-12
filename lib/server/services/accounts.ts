@@ -193,3 +193,11 @@ export async function userFromSessionToken(db: Db, token: string) {
   if (!row || row.user.disabledAt) return null;
   return row.user;
 }
+
+/** Marca o tutorial de boas-vindas como visto (concluído ou pulado). Guarda só a primeira vez. */
+export async function markTutorialSeen(db: Db, userId: string): Promise<void> {
+  await db
+    .update(users)
+    .set({ tutorialSeenAt: new Date() })
+    .where(and(eq(users.id, userId), isNull(users.tutorialSeenAt)));
+}

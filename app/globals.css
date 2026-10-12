@@ -23,3 +23,17 @@ body {
     display: none !important;
   }
 }
+
+/* Tutorial do painel: cada passo entra com um leve deslize (sem animação para quem prefere menos movimento). */
+@media (prefers-reduced-motion: no-preference) {
+  .tutorial-step {
+    animation: tutorial-step-in 220ms ease-out;
+  }
+}
+
+@keyframes tutorial-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}

@@ -7,7 +7,8 @@ export function PanelNav({
   links,
   vertical = true,
 }: {
-  links: { href: string; label: string; exact?: boolean }[];
+  /** `tour`: identificador usado pelo tutorial para destacar o item (atributo data-tour). */
+  links: { href: string; label: string; exact?: boolean; tour?: string }[];
   /** Vertical a partir de telas largas (barra lateral do painel); falso = sempre horizontal. */
   vertical?: boolean;
 }) {
@@ -21,6 +22,7 @@ export function PanelNav({
             key={l.href}
             href={l.href}
             aria-current={active ? "page" : undefined}
+            data-tour={l.tour}
             className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               active ? "bg-moveo-primarySoft text-moveo-primaryDark" : "text-moveo-muted hover:bg-moveo-bg hover:text-moveo-ink"
             }`}

@@ -8,6 +8,7 @@ import {
   issueEmailVerification,
   login,
   logout,
+  markTutorialSeen,
   registerProfessional,
   requestPasswordReset,
   resetPassword,
@@ -114,4 +115,10 @@ export async function switchWorkspaceAction(fd: FormData): Promise<void> {
   await loadWorkspaceContext(await getDb(), user.id, id);
   setWorkspaceCookie(id);
   redirect("/painel");
+}
+
+/** Tutorial de boas-vindas concluído ou pulado: não abre mais sozinho (continua em "Como funciona"). */
+export async function markTutorialSeenAction(): Promise<void> {
+  const user = await requireUser();
+  if (!user.tutorialSeenAt) await markTutorialSeen(await getDb(), user.id);
 }

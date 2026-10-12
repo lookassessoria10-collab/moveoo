@@ -87,6 +87,8 @@ export const users = pgTable("users", {
   disabledAt: ts("disabled_at"),
   failedLoginCount: integer("failed_login_count").notNull().default(0),
   lockedUntil: ts("locked_until"),
+  /** Tutorial de boas-vindas do painel concluído ou pulado (nulo = abre sozinho na próxima visita). */
+  tutorialSeenAt: ts("tutorial_seen_at"),
   createdAt: createdAt(),
 });
 
