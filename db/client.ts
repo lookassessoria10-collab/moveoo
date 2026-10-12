@@ -45,7 +45,19 @@ export function hostedDatabaseUrl(direct = false): string | null {
   const env = process.env;
   const pooled = env.DATABASE_URL || env.POSTGRES_URL || null;
   if (!direct) return pooled;
-  return env.DATABASE_URL_UNPOOLED || env.POSTGRES_URL_NON_POOLING || pooled;
+  const unpooled = env.DATABASE_URL_UNPOOLED || env.POSTGRES_URL_NON_POOLING || null;
+  // A "Direct connection" do Supabase (db.<ref>.supabase.co) só responde em IPv6,
+  // que a Vercel não tem: nesse caso as migrações usam o pooler.
+  if (unpooled && isSupabaseDirectHost(unpooled)) return pooled ?? unpooled;
+  return unpooled || pooled;
+}
+
+function isSupabaseDirectHost(url: string): boolean {
+  try {
+    return /^db\.[a-z0-9]+\.supabase\.co$/.test(new URL(url).hostname);
+  } catch {
+    return false;
+  }
 }
 
 /**

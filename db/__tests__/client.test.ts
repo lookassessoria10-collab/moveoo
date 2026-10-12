@@ -30,6 +30,13 @@ describe("endereço do banco hospedado", () => {
     expect(hostedDatabaseUrl(true)).toContain(":5432/");
   });
 
+  it("Supabase com 'Direct connection' (só IPv6): migrações usam o pooler", () => {
+    clearEnv();
+    process.env.POSTGRES_URL = "postgres://u:p@aws-0-sa-east-1.pooler.supabase.com:6543/postgres";
+    process.env.POSTGRES_URL_NON_POOLING = "postgres://postgres:p@db.orcbvhkpseukrjwtomtf.supabase.co:5432/postgres";
+    expect(hostedDatabaseUrl(true)).toContain("pooler.supabase.com");
+  });
+
   it("Neon: DATABASE_URL tem prioridade e a direta é DATABASE_URL_UNPOOLED", () => {
     clearEnv();
     process.env.DATABASE_URL = "postgres://u:p@ep-x-pooler.neon.tech/db?sslmode=require";
