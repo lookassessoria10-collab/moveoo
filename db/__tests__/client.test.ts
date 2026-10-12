@@ -25,7 +25,8 @@ describe("endereço do banco hospedado", () => {
   it("Supabase pela Vercel: pooler no app, conexão direta nas migrações", () => {
     clearEnv();
     process.env.POSTGRES_URL = "postgres://u:p@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require";
-    process.env.POSTGRES_URL_NON_POOLING = "postgres://u:p@db.abc.supabase.co:5432/postgres?sslmode=require";
+    // Session pooler (porta 5432 no host do pooler) — funciona na Vercel.
+    process.env.POSTGRES_URL_NON_POOLING = "postgres://u:p@aws-0-sa-east-1.pooler.supabase.com:5432/postgres?sslmode=require";
     expect(hostedDatabaseUrl()).toContain(":6543/");
     expect(hostedDatabaseUrl(true)).toContain(":5432/");
   });
