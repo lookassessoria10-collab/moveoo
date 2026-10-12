@@ -56,11 +56,19 @@ export const requestSchema = z.object({
 });
 export type RequestInput = z.input<typeof requestSchema>;
 
-function assertCanInvite(ctx: WorkspaceContext) {
+/**
+ * Convites exigem e-mail confirmado só em atendimento REAL. Em espaços de
+ * demonstração (somente dados fictícios) testadores podem convidar sem
+ * confirmar — até existir um provedor de e-mail, a confirmação não chega
+ * na versão publicada.
+ */
+export function assertCanInvite(ctx: WorkspaceContext) {
   requireRole(ctx, "gestor", "profissional");
-  if (!ctx.emailVerified) throw forbidden("Confirme seu e-mail antes de enviar convites.");
-  if (ctx.workspace.environment === "real" && ctx.profile?.verificationStatus !== "verificado") {
-    throw forbidden("Atendimento real exige registro profissional verificado.");
+  if (ctx.workspace.environment === "real") {
+    if (!ctx.emailVerified) throw forbidden("Confirme seu e-mail antes de enviar convites.");
+    if (ctx.profile?.verificationStatus !== "verificado") {
+      throw forbidden("Atendimento real exige registro profissional verificado.");
+    }
   }
 }
 

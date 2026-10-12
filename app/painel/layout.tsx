@@ -88,7 +88,7 @@ export default async function PanelLayout({ children }: { children: ReactNode })
               servem como evidência de validação.
             </Notice>
           )}
-          {!ctx.emailVerified && (
+          {!ctx.emailVerified && ctx.workspace.environment === "real" && (
             <Notice tone="warn" title="Confirme seu e-mail">
               <span>Enviamos um link de confirmação. Convites só podem ser enviados depois disso. </span>
               <form action={resendVerificationAction} className="inline">

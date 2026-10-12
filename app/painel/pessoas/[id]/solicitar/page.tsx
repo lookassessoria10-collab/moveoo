@@ -54,7 +54,7 @@ export default async function RequestPage({ params, searchParams }: { params: { 
         title={previous ? "Solicitar reavaliação" : "Solicitar avaliação"}
         subtitle={`Para ${person.fullName}. A pessoa recebe um convite individual com prazo.`}
       />
-      {!ctx.emailVerified && (
+      {!ctx.emailVerified && ctx.workspace.environment === "real" && (
         <div className="mb-4">
           <Notice tone="warn">Confirme seu e-mail para poder enviar convites.</Notice>
         </div>

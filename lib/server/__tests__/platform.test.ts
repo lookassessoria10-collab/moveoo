@@ -30,6 +30,7 @@ import {
   compareWithPrevious,
   recordManualMeasurements,
   whatsappNumber,
+  assertCanInvite,
 } from "../services/assessments";
 import {
   confirmInvitation,
@@ -42,7 +43,7 @@ import {
   submitAssessmentResult,
   type PersonScope,
 } from "../services/personAccess";
-import { login } from "../services/accounts";
+import { login, registerProfessional } from "../services/accounts";
 import { recordReleaseDecision } from "../services/admin";
 import { createWorkspace } from "../services/workspaces";
 import { assertProtocolExecutable, redactSecrets } from "../services/core";
@@ -507,6 +508,39 @@ describe("liberação por recurso e ambiente", () => {
       submitAssessmentResult(db, scope, created.request.id, { idempotencyKey: "demo-em-real-1", result: demoKnee }),
       "invalido"
     );
+  });
+});
+
+describe("e-mail confirmado e convites", () => {
+  it("testador recém-cadastrado (e-mail não confirmado) convida no espaço de demonstração", async () => {
+    const { user, workspace } = await registerProfessional(
+      db,
+      {
+        name: "Testador Exemplo",
+        email: "testador@moveo.test",
+        password: "senha-de-teste-123",
+        profession: "educacao_fisica",
+        councilRegion: "4/SP",
+        registrationNumber: "000001-G/SP",
+        jurisdictionUf: "SP",
+        workspaceName: "Espaço do Testador",
+        workspaceKind: "autonomo",
+      },
+      BASE
+    );
+    const ctx = await loadWorkspaceContext(db, user.id, workspace.id);
+    expect(ctx.emailVerified).toBe(false);
+    expect(ctx.workspace.environment).toBe("demonstracao");
+    const p = await createPerson(db, ctx, { fullName: "Aluno Fictício", phone: "11900000002", preferredChannel: "whatsapp", episodeTitle: "Teste", modality: "remoto" });
+    const c = await createRequest(db, ctx, { personId: p.id, protocolId: "joelho-camera", channel: "whatsapp" }, BASE);
+    expect(c.code).toMatch(/^\d{6}$/);
+  });
+
+  it("em atendimento real, e-mail não confirmado continua impedindo convites", async () => {
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.name, "Estúdio Força — real"));
+    const ctx = await loadWorkspaceContext(db, s.diego.id, ws.id);
+    expect(() => assertCanInvite({ ...ctx, emailVerified: false })).toThrow(/Confirme seu e-mail/);
+    expect(() => assertCanInvite(ctx)).not.toThrow();
   });
 });
 
