@@ -1,4 +1,5 @@
 import { Point2D } from "@/lib/types";
+import { scaledDx } from "@/lib/geometry";
 
 /**
  * Ângulo de uma linha entre dois pontos em relação à horizontal, em graus.
@@ -7,5 +8,6 @@ import { Point2D } from "@/lib/types";
  * descritiva de um instante (ver seção "Postura observada" no resultado).
  */
 export function tiltFromHorizontal(a: Point2D, b: Point2D): number {
-  return (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+  // x na mesma escala de y (proporção do quadro — ver lib/geometry.ts).
+  return (Math.atan2(b.y - a.y, scaledDx(b.x - a.x)) * 180) / Math.PI;
 }

@@ -233,6 +233,12 @@ convenção pedida para o crescimento da plataforma.
   (plano frontal). Essa é a forma mais honesta de medir cada plano com uma
   única câmera 2D.
 
+Desde a versão de algoritmo `2026.10-proporcao-v1`, os ângulos são
+calculados com x e y na mesma escala: o MediaPipe normaliza x pela
+largura e y pela altura do quadro, e cada diferença em x é multiplicada
+pela proporção largura ÷ altura do vídeo (`lib/geometry.ts`). Antes
+disso, com o celular em pé, um segmento a 45° era medido como ~60,6°.
+
 Todos os ângulos são **estimativas de amplitude por visão computacional
 2D**, não goniometria clínica certificada. Uma câmera 2D não separa
 perfeitamente planos de movimento nem isola segmentos articulares — por

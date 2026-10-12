@@ -35,6 +35,7 @@
 
 import { readFileSync } from "node:fs";
 import { calculateShoulderFlexionAngle, calculateAbductionAngle } from "@/lib/angles";
+import { setFrameAspect } from "@/lib/geometry";
 import { calculateKneeAngle, kneeFlexionFromRawAngle } from "@/modules/knee/angles";
 import { MovementStateMachine } from "@/lib/movementDetection";
 import { MovingAverage, LandmarksSmoother } from "@/lib/smoothing";
@@ -148,6 +149,8 @@ function replay(record: RawFrameRecord, pipeline: Pipeline): { value: number | n
 
   let started = false;
   for (const sample of record.samples) {
+    // Mesma proporção do quadro usada ao vivo (1 em gravações antigas).
+    setFrameAspect(sample.aspect ?? 1);
     const landmarks = smoother ? smoother.smooth(sample.landmarks) : sample.landmarks;
     const rawAngle =
       record.region === "ombro"

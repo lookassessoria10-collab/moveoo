@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { loadPoseLandmarker } from "./loadPoseLandmarker";
 import { convertLandmarks, convertWorldLandmarks } from "./convertLandmarks";
 import { FrameLandmarks } from "../types";
+import { setFrameAspect } from "../geometry";
 
 export interface PoseLoopStats {
   fps: number;
@@ -55,6 +56,13 @@ export function usePoseLandmarker(
 
           const nowMs = performance.now();
           try {
+            // Proporção do quadro lida no mesmo instante em que ele vai para o
+            // MediaPipe (em alguns celulares as dimensões só "giram" para
+            // retrato depois que o vídeo começa) — usada em todo cálculo de
+            // ângulo deste quadro. Ver lib/geometry.ts.
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+              setFrameAspect(video.videoWidth / video.videoHeight);
+            }
             const result = landmarker.detectForVideo(video, nowMs);
             const poseCount = result.landmarks?.length ?? 0;
             const landmarks = convertLandmarks(

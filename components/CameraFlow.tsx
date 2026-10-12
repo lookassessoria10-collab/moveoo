@@ -8,7 +8,7 @@ import { useAssessmentStore } from "@/stores/assessmentStore";
 import { FrameLandmarks, Movement, MovementAttempt, MovementFrame, Side } from "@/lib/types";
 import { checkPositioning, PositioningCheck } from "@/lib/positioning";
 import { calculateShoulderFlexionAngle, calculateAbductionAngle, calculateTrunkAngle } from "@/lib/angles";
-import { midpoint } from "@/lib/geometry";
+import { getFrameAspect, midpoint } from "@/lib/geometry";
 import { MovementStateMachine } from "@/lib/movementDetection";
 import { MovingAverage, LandmarksSmoother } from "@/lib/smoothing";
 import {
@@ -547,6 +547,7 @@ export function CameraFlow() {
             t: timestamp,
             landmarks: lastRawLandmarksRef.current,
             worldLandmarks: worldLandmarksRef.current,
+            aspect: getFrameAspect(),
           });
         }
       }

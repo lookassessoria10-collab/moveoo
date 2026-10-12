@@ -1,5 +1,5 @@
 import { Point2D } from "./types";
-import { midpoint } from "./geometry";
+import { midpoint, scaledDx } from "./geometry";
 
 /**
  * Ângulo de elevação do braço: vértice no ombro, entre o vetor
@@ -13,8 +13,9 @@ import { midpoint } from "./geometry";
  * conhecida e documentada (ver README).
  */
 function armElevationAngle(shoulder: Point2D, elbow: Point2D, hip: Point2D): number {
-  const trunkVec = { x: hip.x - shoulder.x, y: hip.y - shoulder.y };
-  const armVec = { x: elbow.x - shoulder.x, y: elbow.y - shoulder.y };
+  // x e y na mesma escala (proporção do quadro — ver lib/geometry.ts).
+  const trunkVec = { x: scaledDx(hip.x - shoulder.x), y: hip.y - shoulder.y };
+  const armVec = { x: scaledDx(elbow.x - shoulder.x), y: elbow.y - shoulder.y };
   const dot = trunkVec.x * armVec.x + trunkVec.y * armVec.y;
   const magTrunk = Math.hypot(trunkVec.x, trunkVec.y);
   const magArm = Math.hypot(armVec.x, armVec.y);
@@ -54,7 +55,7 @@ export function calculateTrunkAngle(
 ): number {
   const shoulderMid = midpoint(leftShoulder, rightShoulder);
   const hipMid = midpoint(leftHip, rightHip);
-  const dx = shoulderMid.x - hipMid.x;
+  const dx = scaledDx(shoulderMid.x - hipMid.x);
   const dy = shoulderMid.y - hipMid.y; // negativo: ombro acima do quadril (esperado)
   const angleRad = Math.atan2(dx, -dy);
   return (angleRad * 180) / Math.PI;

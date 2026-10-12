@@ -58,6 +58,12 @@ export interface RawFrameSample {
   landmarks: FrameLandmarks;
   /** Landmarks 3D em metros (saída separada do MediaPipe) — null se o modelo não os entregou naquele quadro. */
   worldLandmarks: FrameLandmarks | null;
+  /**
+   * Proporção largura ÷ altura do quadro (lib/geometry.ts). Ausente nas
+   * gravações anteriores à versão "2026.10-proporcao-v1" — nelas o
+   * reprocessamento usa 1, que reproduz o cálculo antigo.
+   */
+  aspect?: number;
 }
 
 /**

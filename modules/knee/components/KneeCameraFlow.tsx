@@ -6,7 +6,7 @@ import { useCamera } from "@/hooks/useCamera";
 import { usePoseLandmarker } from "@/lib/pose/usePoseLandmarker";
 import { FrameLandmarks, Point2D } from "@/lib/types";
 import { calculateTrunkAngle } from "@/lib/angles";
-import { distance, midpoint } from "@/lib/geometry";
+import { distance, getFrameAspect, midpoint } from "@/lib/geometry";
 import { MovementStateMachine } from "@/lib/movementDetection";
 import { MovingAverage, LandmarksSmoother } from "@/lib/smoothing";
 import { calculateAngularVelocity, calculateMovementDuration } from "@/lib/movementMetrics";
@@ -643,6 +643,7 @@ export function KneeCameraFlow() {
             t: timestamp,
             landmarks: lastRawLandmarksRef.current,
             worldLandmarks: worldLandmarksRef.current,
+            aspect: getFrameAspect(),
           });
         }
       }

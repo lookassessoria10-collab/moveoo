@@ -1,4 +1,5 @@
 import { Point2D } from "@/lib/types";
+import { scaledDx } from "@/lib/geometry";
 
 /**
  * Inclinação, em graus, do segmento lowerPoint->upperPoint em relação à
@@ -8,7 +9,7 @@ import { Point2D } from "@/lib/types";
  * como medida descritiva de inclinação, não de direção.
  */
 export function tiltFromVerticalDeg(lowerPoint: Point2D, upperPoint: Point2D): number {
-  const dx = upperPoint.x - lowerPoint.x;
+  const dx = scaledDx(upperPoint.x - lowerPoint.x); // mesma escala da vertical (lib/geometry.ts)
   const dy = lowerPoint.y - upperPoint.y; // positivo quando upperPoint está acima
   return (Math.atan2(Math.abs(dx), dy) * 180) / Math.PI;
 }

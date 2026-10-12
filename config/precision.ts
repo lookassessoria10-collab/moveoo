@@ -37,8 +37,16 @@
  *   dados de validação a partir de agora — CSVs anteriores (baseline)
  *   têm "algorithmVersion" diferente e não devem ser comparados linha a
  *   linha com os novos sem levar essa mudança em conta.
+ * - "2026.10-proporcao-v1": corrige a proporção da imagem no cálculo de
+ *   todos os ângulos (lib/geometry.ts, docs/auditoria.md A1). Antes, x
+ *   (normalizado pela largura) e y (pela altura) eram tratados na mesma
+ *   escala: com o celular em pé, um segmento a 45° saía como ~60,6°.
+ *   Muda os valores de ombro, joelho, tronco e postura — resultados e
+ *   CSVs das versões anteriores NÃO são comparáveis com os novos (a
+ *   plataforma recusa a comparação automática entre versões). As
+ *   amostras brutas passam a gravar a proporção de cada quadro.
  */
-export const ALGORITHM_VERSION = "2026.09-smoothing-v1";
+export const ALGORITHM_VERSION = "2026.10-proporcao-v1";
 
 export const PRECISION_CONFIG = {
   // Passo 2 — modo de validação com goniômetro/inclinômetro.
