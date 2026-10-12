@@ -84,11 +84,24 @@ necessário publicar em HTTPS (ex.: Vercel) ou usar um túnel HTTPS (ex.:
 ## Como publicar na Vercel (somente dados fictícios)
 
 Na Vercel o disco é só de leitura, então a plataforma usa um PostgreSQL
-hospedado (Neon) em vez do banco local.
+hospedado (Supabase ou Neon) em vez do banco local. A plataforma usa só o
+Postgres do Supabase (conexão direta pelo servidor); não usa a API REST
+nem as chaves "publishable"/anon dele.
 
 1. Projeto na Vercel importado do repositório `lookassessoria10-collab/moveoo`.
-2. **Storage → Create Database → Neon** (plano gratuito) e conecte ao
-   projeto. A Vercel cria a variável `DATABASE_URL` sozinha.
+2. Banco:
+   - **Supabase**: no painel do projeto Supabase → botão **Connect** →
+     *Connection String*. Copie a URI do **Transaction pooler** (porta 6543)
+     e a do **Session pooler** (porta 5432), troque `[YOUR-PASSWORD]` pela
+     senha do banco e crie na Vercel `POSTGRES_URL` (transaction) e
+     `POSTGRES_URL_NON_POOLING` (session). Não use a "Direct connection"
+     (só IPv6). Se o banco foi criado pela integração da Vercel
+     (Storage → Supabase), essas variáveis já existem.
+     Opcional: `DATABASE_SSL_CA` com o conteúdo do certificado
+     (Supabase → Database → SSL) para verificar a cadeia TLS.
+   - **Neon**: Storage → Create Database → Neon; a Vercel cria `DATABASE_URL`.
+   - A cada deploy as tabelas recebem RLS ligado e os papéis da API pública
+     do Supabase (anon/authenticated) perdem o acesso (`db/harden.ts`).
 3. **Settings → Environment Variables**, para Production (e Preview, se usar):
    - `MOVEO_SEED_DEMO` = `1` → cria as contas fictícias no primeiro deploy;
    - `MOVEO_DEMO_PASSWORD` = uma senha sua (mínimo de 10 caracteres) para
