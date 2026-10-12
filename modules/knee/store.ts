@@ -100,6 +100,9 @@ interface KneeState {
   calibration: KneeCalibrationBaseline | null;
 
   queueIndex: number;
+  /** Fila desta avaliação. Padrão: todos os testes; o acompanhamento pode pedir só alguns. */
+  queue: KneeQueueItem[];
+  setQueue: (queue: KneeQueueItem[]) => void;
   pendingAttempts: KneeAttempt[];
   flexionResults: KneeTestResult[];
   squatResult: KneeTestResult | null;
@@ -148,6 +151,8 @@ export const useKneeStore = create<KneeState>((set, get) => ({
   calibration: null,
 
   queueIndex: 0,
+  queue: KNEE_QUEUE,
+  setQueue: (queue) => set({ queue, queueIndex: 0 }),
   pendingAttempts: [],
   flexionResults: [],
   squatResult: null,
@@ -164,14 +169,14 @@ export const useKneeStore = create<KneeState>((set, get) => ({
 
   currentQueueItem: () => {
     const { queueIndex } = get();
-    return KNEE_QUEUE[queueIndex] ?? null;
+    return get().queue[queueIndex] ?? null;
   },
 
   addAttempt: (attempt) => set((s) => ({ pendingAttempts: [...s.pendingAttempts, attempt] })),
 
   finalizeBlockPain: (pain) => {
     const { pendingAttempts, queueIndex } = get();
-    const item = KNEE_QUEUE[queueIndex];
+    const item = get().queue[queueIndex];
     if (!item) return;
     const maxAngles = pendingAttempts.map((a) => a.maxAngle);
     const testResult: KneeTestResult = {
@@ -238,6 +243,7 @@ export const useKneeStore = create<KneeState>((set, get) => ({
       safety: initialSafety,
       calibration: null,
       queueIndex: 0,
+      queue: KNEE_QUEUE,
       pendingAttempts: [],
       flexionResults: [],
       squatResult: null,

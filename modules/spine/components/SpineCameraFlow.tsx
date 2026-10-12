@@ -14,7 +14,7 @@ import { checkOrientation, checkVerticalFraming } from "@/lib/framing";
 import { SPINE_CONFIG } from "@/config/modules/spine";
 import { PRECISION_CONFIG } from "@/config/precision";
 import { tiltFromHorizontal } from "../angles";
-import { useSpineStore, SPINE_QUEUE, SpineQueueItem } from "../store";
+import { useSpineStore, SpineQueueItem } from "../store";
 import { SpineAttempt, SpineMovementFrame } from "../types";
 import { drawPoseOverlay } from "@/components/PoseOverlay";
 import { PainQuestionScreen } from "./screens/PainQuestionScreen";
@@ -41,8 +41,9 @@ export function SpineCameraFlow() {
   const debugMode = useSpineStore((s) => s.debugMode);
   const toggleDebugMode = useSpineStore((s) => s.toggleDebugMode);
   const queueIndex = useSpineStore((s) => s.queueIndex);
+  const queue = useSpineStore((s) => s.queue);
   const calibration = useSpineStore((s) => s.calibration);
-  const item: SpineQueueItem | null = SPINE_QUEUE[queueIndex] ?? null;
+  const item: SpineQueueItem | null = queue[queueIndex] ?? null;
 
   const [positioningOk, setPositioningOk] = useState(false);
   const [positioningMsg, setPositioningMsg] = useState("Procurando você...");

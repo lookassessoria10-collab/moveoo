@@ -57,6 +57,9 @@ interface AssessmentState {
   calibration: CalibrationBaseline | null;
 
   queueIndex: number;
+  /** Fila desta avaliação. Padrão: todos os testes; o acompanhamento pode pedir só alguns. */
+  queue: TestQueueItem[];
+  setQueue: (queue: TestQueueItem[]) => void;
   pendingAttempts: MovementAttempt[];
   blocks: MovementBlockResult[];
 
@@ -102,6 +105,8 @@ export const useAssessmentStore = create<AssessmentState>((set, get) => ({
   calibration: null,
 
   queueIndex: 0,
+  queue: TEST_QUEUE,
+  setQueue: (queue) => set({ queue, queueIndex: 0 }),
   pendingAttempts: [],
   blocks: [],
 
@@ -116,7 +121,7 @@ export const useAssessmentStore = create<AssessmentState>((set, get) => ({
 
   currentQueueItem: () => {
     const { queueIndex } = get();
-    return TEST_QUEUE[queueIndex] ?? null;
+    return get().queue[queueIndex] ?? null;
   },
 
   addAttempt: (attempt) =>
@@ -124,7 +129,7 @@ export const useAssessmentStore = create<AssessmentState>((set, get) => ({
 
   finalizeBlockPain: (pain) => {
     const { pendingAttempts, queueIndex } = get();
-    const item = TEST_QUEUE[queueIndex];
+    const item = get().queue[queueIndex];
     if (!item) return;
     const summary = summarizeAttempts(pendingAttempts);
     const block: MovementBlockResult = {
@@ -199,6 +204,7 @@ export const useAssessmentStore = create<AssessmentState>((set, get) => ({
       safety: initialSafety,
       calibration: null,
       queueIndex: 0,
+      queue: TEST_QUEUE,
       pendingAttempts: [],
       blocks: [],
       result: null,

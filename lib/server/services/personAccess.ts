@@ -1,9 +1,10 @@
 /**
  * Acesso da pessoa atendida.
  *
- * Fluxo: link do convite (GET não autentica nem consome nada) →
- * "Continuar" envia um código ao contato cadastrado → código confirmado
- * vira uma sessão com escopo restrito à solicitação daquele convite.
+ * Fluxo: link do convite (GET não autentica nem consome nada) → a pessoa
+ * digita o código de acesso que o profissional repassou por outro meio →
+ * código confirmado vira uma sessão com escopo restrito à solicitação
+ * daquele convite.
  * O convite nunca dá acesso ao histórico completo.
  */
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
@@ -59,51 +60,15 @@ export async function getInvitationLanding(db: Db, token: string) {
   };
 }
 
-/** Clique explícito em "Continuar": registra o acesso e envia o código ao contato cadastrado. */
-export async function beginInvitation(db: Db, token: string) {
-  const row = await findUsableInvitation(db, token);
-  if (!row) throw notFound("Convite");
-  const { invitation, person, workspace } = row;
-  const destination = invitation.channel === "email" ? person.email : person.phone;
-  if (!destination) throw invalid("Contato não cadastrado. Fale com o profissional.");
-  if (invitation.codeAttempts >= ACCESS.codeMaxAttempts) {
-    throw forbidden("Muitas tentativas. Peça um novo convite ao profissional.");
-  }
-  // No máximo um código por minuto (evita disparo repetido de SMS/e-mail).
-  if (invitation.codeExpiresAt) {
-    const lastSentAt = invitation.codeExpiresAt.getTime() - ACCESS.codeMinutes * 60_000;
-    if (Date.now() - lastSentAt < ACCESS.codeResendSeconds * 1000) {
-      throw conflict("Aguarde um minuto antes de pedir outro código.");
-    }
-  }
-  const code = randomCode();
-  await db
-    .update(invitations)
-    .set({
-      accessedAt: invitation.accessedAt ?? new Date(),
-      codeHash: sha256(code),
-      codeExpiresAt: new Date(Date.now() + ACCESS.codeMinutes * 60_000),
-    })
-    .where(eq(invitations.id, invitation.id));
-  await sendMessage(db, {
-    channel: invitation.channel === "email" ? "email" : "sms",
-    recipient: destination,
-    subject: `Seu código de acesso — ${workspace.name}`,
-    body: `Seu código de acesso no ${PLATFORM.name} é ${code}. Ele vale por ${ACCESS.codeMinutes} minutos. Não compartilhe este código.`,
-  });
-  await audit(db, {
-    workspaceId: workspace.id,
-    actorType: "pessoa",
-    actorId: person.id,
-    action: "convite.codigo_enviado",
-    objectType: "invitation",
-    objectId: invitation.id,
-  });
-  return { maskedDestination: maskContact(destination), channel: invitation.channel };
-}
-
 export type ConfirmResult = { ok: true; sessionToken: string } | { ok: false; reason: "codigo" | "expirado" | "bloqueado" };
 
+/**
+ * A pessoa digita o código que o profissional repassou (por um meio
+ * diferente do link). O código vale enquanto o convite valer e continua
+ * válido depois do primeiro acesso, para a pessoa poder voltar quando a
+ * sessão expirar. Após N erros, o convite bloqueia: o profissional gera um
+ * novo link e código.
+ */
 export async function confirmInvitation(db: Db, token: string, code: string): Promise<ConfirmResult> {
   const row = await findUsableInvitation(db, token);
   if (!row) return { ok: false, reason: "expirado" };
@@ -114,7 +79,10 @@ export async function confirmInvitation(db: Db, token: string, code: string): Pr
   }
   const normalized = code.replace(/\D/g, "");
   if (normalized.length !== 6 || !safeEqualHex(sha256(normalized), invitation.codeHash)) {
-    await db.update(invitations).set({ codeAttempts: invitation.codeAttempts + 1 }).where(eq(invitations.id, invitation.id));
+    await db
+      .update(invitations)
+      .set({ codeAttempts: invitation.codeAttempts + 1, accessedAt: invitation.accessedAt ?? new Date() })
+      .where(eq(invitations.id, invitation.id));
     return { ok: false, reason: invitation.codeAttempts + 1 >= ACCESS.codeMaxAttempts ? "bloqueado" : "codigo" };
   }
   const sessionToken = randomToken();
@@ -123,7 +91,11 @@ export async function confirmInvitation(db: Db, token: string, code: string): Pr
   );
   await db
     .update(invitations)
-    .set({ confirmedAt: invitation.confirmedAt ?? new Date(), codeHash: null, codeExpiresAt: null, codeAttempts: 0 })
+    .set({
+      accessedAt: invitation.accessedAt ?? new Date(),
+      confirmedAt: invitation.confirmedAt ?? new Date(),
+      codeAttempts: 0,
+    })
     .where(eq(invitations.id, invitation.id));
   await db.insert(personSessions).values({
     tokenHash: sha256(sessionToken),
@@ -346,7 +318,7 @@ export async function submitAssessmentResult(
 
   let adapted;
   try {
-    adapted = adaptModuleResult(request.protocolId, input.result);
+    adapted = adaptModuleResult(request.protocolId, input.result, request.selectedItems ?? null);
   } catch {
     await audit(db, {
       workspaceId: scope.workspace.id,

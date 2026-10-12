@@ -29,9 +29,9 @@ import {
   revokeInvitation,
   compareWithPrevious,
   recordManualMeasurements,
+  whatsappNumber,
 } from "../services/assessments";
 import {
-  beginInvitation,
   confirmInvitation,
   getInvitationLanding,
   getPublishedFeedbackForPerson,
@@ -75,20 +75,17 @@ function tokenFromUrl(url: string) {
   return url.split("/convite/")[1];
 }
 
-async function lastCode(recipient: string): Promise<string> {
-  const [m] = await db
-    .select()
-    .from(outboxMessages)
-    .where(eq(outboxMessages.recipient, recipient))
-    .orderBy(desc(outboxMessages.createdAt))
-    .limit(1);
-  return m.body.match(/é (\d{6})/)![1];
-}
+// O código de acesso é mostrado só ao profissional na criação do convite; guardamos aqui para "repassar".
+const codes = new Map<string, string>();
+const createRequest: typeof createAssessmentRequest = async (...args) => {
+  const r = await createAssessmentRequest(...args);
+  codes.set(r.url, r.code);
+  return r;
+};
 
-async function enterAsPerson(inviteUrl: string, recipient: string): Promise<{ token: string; scope: PersonScope }> {
+async function enterAsPerson(inviteUrl: string, _recipient?: string): Promise<{ token: string; scope: PersonScope }> {
   const t = tokenFromUrl(inviteUrl);
-  await beginInvitation(db, t);
-  const res = await confirmInvitation(db, t, await lastCode(recipient));
+  const res = await confirmInvitation(db, t, codes.get(inviteUrl)!);
   if (!res.ok) throw new Error("confirmação falhou");
   const scope = (await personScopeFromToken(db, res.sessionToken))!;
   return { token: res.sessionToken, scope };
@@ -133,9 +130,9 @@ describe("isolamento entre organizações", () => {
   });
 
   it("solicitação de B não é visível a partir de A", async () => {
-    const { request } = await createAssessmentRequest(db, diegoCtx, { personId: s.pedro.id, protocolId: "joelho-camera", channel: "email" }, BASE);
+    const { request } = await createRequest(db, diegoCtx, { personId: s.pedro.id, protocolId: "joelho-camera", channel: "email" }, BASE);
     await expectDenied(getRequestDetail(db, anaCtx, request.id));
-    await expectDenied(createAssessmentRequest(db, anaCtx, { personId: s.pedro.id, protocolId: "ombro-camera", channel: "email" }, BASE));
+    await expectDenied(createRequest(db, anaCtx, { personId: s.pedro.id, protocolId: "ombro-camera", channel: "email" }, BASE));
   });
 
   it("o banco rejeita ligar um registro a uma pessoa de outro espaço (chave composta)", async () => {
@@ -178,7 +175,7 @@ describe("vínculo e papéis dentro da mesma organização", () => {
 
 describe("convite e acesso da pessoa", () => {
   it("abrir o link (prévia) não autentica nem registra acesso", async () => {
-    const { url, invitation } = await createAssessmentRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
+    const { url, invitation } = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
     const landing = await getInvitationLanding(db, tokenFromUrl(url));
     expect(landing?.workspaceName).toBe(s.clinica.name);
     expect(JSON.stringify(landing)).not.toContain("João");
@@ -188,38 +185,53 @@ describe("convite e acesso da pessoa", () => {
   });
 
   it("código errado não dá acesso; após o limite de tentativas, o convite bloqueia", async () => {
-    const { url } = await createAssessmentRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
+    const { url } = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
     const t = tokenFromUrl(url);
-    await beginInvitation(db, t);
-    for (let i = 0; i < 4; i++) expect((await confirmInvitation(db, t, "000000x")).ok).toBe(false);
-    const last = await confirmInvitation(db, t, "999999");
-    expect(last).toEqual({ ok: false, reason: expect.stringMatching(/codigo|bloqueado/) });
-    const correct = await lastCode("joao.paciente@moveo.test");
-    expect((await confirmInvitation(db, t, correct)).ok).toBe(false);
+    const wrong = codes.get(url) === "000000" ? "111111" : "000000";
+    for (let i = 0; i < 4; i++) expect((await confirmInvitation(db, t, wrong)).ok).toBe(false);
+    expect(await confirmInvitation(db, t, wrong)).toEqual({ ok: false, reason: "bloqueado" });
+    expect((await confirmInvitation(db, t, codes.get(url)!)).ok).toBe(false);
   });
 
-  it("não envia um novo código antes de um minuto (evita disparo repetido)", async () => {
-    const { url } = await createAssessmentRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
-    await beginInvitation(db, tokenFromUrl(url));
-    await expectDenied(beginInvitation(db, tokenFromUrl(url)), "conflito");
+  it("o código não vai na mensagem do convite: o profissional repassa por outro meio", async () => {
+    const { url, code } = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
+    expect(code).toMatch(/^\d{6}$/);
+    const msgs = await db.select().from(outboxMessages).where(eq(outboxMessages.recipient, "joao.paciente@moveo.test"));
+    const invite = msgs.find((m) => m.body.includes(url))!;
+    expect(invite).toBeTruthy();
+    expect(invite.body).not.toContain(code);
+  });
+
+  it("link do WhatsApp usa o número internacional (55 + DDD) e não leva o código", async () => {
+    expect(whatsappNumber("(11) 90000-0001")).toBe("5511900000001");
+    expect(whatsappNumber("5511900000001")).toBe("5511900000001");
+    const c = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "whatsapp" }, BASE);
+    expect(c.whatsappUrl).toMatch(/^https:\/\/wa\.me\/5511900000001\?text=/);
+    expect(decodeURIComponent(c.whatsappUrl!)).not.toContain(c.code);
+  });
+
+  it("o mesmo código vale para voltar depois (sessão expirada), enquanto o convite valer", async () => {
+    const { url } = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
+    expect((await enterAsPerson(url)).token).toBeTruthy();
+    expect((await enterAsPerson(url)).token).toBeTruthy();
   });
 
   it("convite expirado ou revogado não abre a atividade e derruba a sessão derivada", async () => {
-    const { url, invitation } = await createAssessmentRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
+    const { url, invitation } = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
     const { token } = await enterAsPerson(url, "joao.paciente@moveo.test");
     expect(await personScopeFromToken(db, token)).not.toBeNull();
     await revokeInvitation(db, anaCtx, invitation.id);
     expect(await getInvitationLanding(db, tokenFromUrl(url))).toBeNull();
     expect(await personScopeFromToken(db, token)).toBeNull();
 
-    const other = await createAssessmentRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
+    const other = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
     await db.update(invitations).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(invitations.id, other.invitation.id));
     expect(await getInvitationLanding(db, tokenFromUrl(other.url))).toBeNull();
   });
 
   it("a sessão da pessoa só alcança a solicitação do próprio convite", async () => {
-    const a = await createAssessmentRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
-    const b = await createAssessmentRequest(db, anaCtx, { personId: s.joao.id, protocolId: "joelho-camera", channel: "email" }, BASE);
+    const a = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
+    const b = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "joelho-camera", channel: "email" }, BASE);
     const { scope } = await enterAsPerson(a.url, "joao.paciente@moveo.test");
     await consentAll(scope);
     await expectDenied(startAssessment(db, scope, b.request.id, { idempotencyKey: "chave-qualquer-1" }));
@@ -227,7 +239,7 @@ describe("convite e acesso da pessoa", () => {
   });
 
   it("sem os aceites registrados, a atividade não inicia", async () => {
-    const { url, request } = await createAssessmentRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
+    const { url, request } = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
     const { scope } = await enterAsPerson(url, "joao.paciente@moveo.test");
     // aceites anteriores de João (outro convite) continuam valendo — registramos recusa para testar
     await recordConsent(db, scope, { key: "uso_camera", decision: "recusado", signerName: "João Exemplo" });
@@ -240,7 +252,7 @@ describe("resultado, revisão e devolutiva", () => {
   let scope: PersonScope;
 
   it("captura insuficiente não gera número; reenvio não duplica", async () => {
-    const created = await createAssessmentRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
+    const created = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
     requestId = created.request.id;
     ({ scope } = await enterAsPerson(created.url, "joao.paciente@moveo.test"));
     await consentAll(scope);
@@ -300,7 +312,7 @@ describe("resultado, revisão e devolutiva", () => {
   });
 
   it("reavaliação com o mesmo protocolo é comparada; diferença sem rótulo de melhora", async () => {
-    const re = await createAssessmentRequest(
+    const re = await createRequest(
       db,
       anaCtx,
       { personId: s.joao.id, protocolId: "ombro-camera", channel: "email", previousRequestId: requestId },
@@ -318,7 +330,7 @@ describe("resultado, revisão e devolutiva", () => {
   });
 
   it("saída no meio da captura marca a sessão como interrompida", async () => {
-    const c = await createAssessmentRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
+    const c = await createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email" }, BASE);
     const { scope: sc } = await enterAsPerson(c.url, "joao.paciente@moveo.test");
     await startAssessment(db, sc, c.request.id, { idempotencyKey: "sessao-int-abcdef" });
     await interruptAssessment(db, sc, c.request.id, { idempotencyKey: "sessao-int-abcdef", reason: "saiu_da_pagina" });
@@ -341,6 +353,66 @@ describe("resultado, revisão e devolutiva", () => {
   });
 });
 
+describe("escolha de movimentos", () => {
+  it("pede só a flexão do ombro direito: o resultado traz só essa medida", async () => {
+    const c = await createRequest(
+      db,
+      anaCtx,
+      { personId: s.joao.id, protocolId: "ombro-camera", channel: "email", selectedItems: ["flexao-direito"] },
+      BASE
+    );
+    expect(c.request.selectedItems).toEqual(["flexao-direito"]);
+    const { scope } = await enterAsPerson(c.url);
+    await consentAll(scope);
+    const r = await submitAssessmentResult(db, scope, c.request.id, {
+      idempotencyKey: "selecao-1-abcdef",
+      result: shoulderPayload({ fr: [120, 122, 118], fl: [] }),
+    });
+    const ms = await db.select().from(measurements).where(eq(measurements.sessionId, r.session.id));
+    expect(ms.map((m) => [m.metricKey, m.side])).toEqual([["ombro.flexao.elevacao_media", "direito"]]);
+    expect(ms[0].value).toBeCloseTo(120);
+  });
+
+  it("seleção completa vira 'protocolo completo'; seleção vazia ou inválida é recusada", async () => {
+    const all = await createRequest(
+      db,
+      anaCtx,
+      {
+        personId: s.joao.id,
+        protocolId: "ombro-camera",
+        channel: "email",
+        selectedItems: ["flexao-direito", "flexao-esquerdo", "abducao-direito", "abducao-esquerdo"],
+      },
+      BASE
+    );
+    expect(all.request.selectedItems).toBeNull();
+    await expectDenied(
+      createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email", selectedItems: [] }, BASE),
+      "invalido"
+    );
+    await expectDenied(
+      createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "ombro-camera", channel: "email", selectedItems: ["agachamento"] }, BASE),
+      "invalido"
+    );
+  });
+
+  it("reavaliação sem escolha explícita repete os movimentos da anterior", async () => {
+    const first = await createRequest(
+      db,
+      anaCtx,
+      { personId: s.joao.id, protocolId: "joelho-camera", channel: "email", selectedItems: ["agachamento"] },
+      BASE
+    );
+    const again = await createRequest(
+      db,
+      anaCtx,
+      { personId: s.joao.id, protocolId: "joelho-camera", channel: "email", previousRequestId: first.request.id },
+      BASE
+    );
+    expect(again.request.selectedItems).toEqual(["agachamento"]);
+  });
+});
+
 describe("liberação por recurso e ambiente", () => {
   it("espaço real exige registro verificado", async () => {
     await expectDenied(createWorkspace(db, s.ana.id, { name: "Real Ana", kind: "clinica", environment: "real" }), "acesso_negado");
@@ -353,7 +425,7 @@ describe("liberação por recurso e ambiente", () => {
     const pessoa = await createPerson(db, ctx, { fullName: "Pessoa Teste", email: "real@moveo.test", preferredChannel: "email", episodeTitle: "Teste", modality: "remoto" });
     expect(pessoa.isFictitious).toBe(false);
     await expectDenied(
-      createAssessmentRequest(db, ctx, { personId: pessoa.id, protocolId: "joelho-camera", channel: "email" }, BASE),
+      createRequest(db, ctx, { personId: pessoa.id, protocolId: "joelho-camera", channel: "email" }, BASE),
       "bloqueado_liberacao"
     );
   });
@@ -368,7 +440,7 @@ describe("liberação por recurso e ambiente", () => {
       evidence: "Nenhuma — teste de software",
     });
     await expectDenied(
-      createAssessmentRequest(db, anaCtx, { personId: s.joao.id, protocolId: "coluna-camera", channel: "email" }, BASE),
+      createRequest(db, anaCtx, { personId: s.joao.id, protocolId: "coluna-camera", channel: "email" }, BASE),
       "bloqueado_liberacao"
     );
   });
@@ -420,7 +492,7 @@ describe("liberação por recurso e ambiente", () => {
     const [ws] = await db.select().from(workspaces).where(eq(workspaces.name, "Estúdio Força — real"));
     const ctx = await loadWorkspaceContext(db, s.diego.id, ws.id);
     const people = await listPeople(db, ctx);
-    const created = await createAssessmentRequest(db, ctx, { personId: people[0].id, protocolId: "joelho-camera", channel: "email" }, BASE);
+    const created = await createRequest(db, ctx, { personId: people[0].id, protocolId: "joelho-camera", channel: "email" }, BASE);
     const { scope } = await enterAsPerson(created.url, "real@moveo.test");
     await consentAll(scope);
     const demoKnee = {

@@ -4,30 +4,18 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { COOKIES } from "@/config/platform";
-import {
-  beginInvitation,
-  confirmInvitation,
-  recordConsent,
-  revokePersonSession,
-} from "@/lib/server/services/personAccess";
+import { confirmInvitation, recordConsent, revokePersonSession } from "@/lib/server/services/personAccess";
 import { requirePersonScope, runAction, setPersonSessionCookie, type ActionState } from "@/lib/server/session";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
-
-export async function beginInviteAction(_: ActionState, fd: FormData): Promise<ActionState> {
-  return runAction(async () => {
-    const r = await beginInvitation(await getDb(), str(fd, "token"));
-    return { ok: true, data: { masked: r.maskedDestination, channel: r.channel } };
-  });
-}
 
 export async function confirmInviteAction(prev: ActionState, fd: FormData): Promise<ActionState> {
   const r = await confirmInvitation(await getDb(), str(fd, "token"), str(fd, "code"));
   if (!r.ok) {
     const msg = {
-      codigo: "Código incorreto. Confira a mensagem e tente de novo.",
-      expirado: "O código expirou ou o convite não é mais válido. Peça um novo código.",
-      bloqueado: "Muitas tentativas. Peça um novo convite ao profissional.",
+      codigo: "Código incorreto. Confira com o profissional e tente de novo.",
+      expirado: "Este convite não é mais válido. Peça um novo link ao profissional.",
+      bloqueado: "Muitas tentativas com código errado. Peça um novo link e código ao profissional.",
     }[r.reason];
     return { error: msg, data: prev?.data };
   }

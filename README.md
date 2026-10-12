@@ -81,22 +81,30 @@ interfaces de rede por padrão). Como `getUserMedia` exige HTTPS ou
 necessário publicar em HTTPS (ex.: Vercel) ou usar um túnel HTTPS (ex.:
 `ngrok`) apontando para a porta 3000.
 
-## Como publicar na Vercel
+## Como publicar na Vercel (somente dados fictícios)
 
-> **Atenção — vale só para a versão antiga, sem a plataforma.** A
-> plataforma usa um PostgreSQL embutido (PGlite) que grava em disco local;
-> em hospedagem serverless esse disco é temporário e os dados se perdem.
-> Antes de publicar a plataforma é preciso trocar para um PostgreSQL
-> gerenciado (ver `docs/plataforma.md`, seção 2) e cumprir os itens de
-> segurança e regulatórios pendentes. Não publique esta branch como está.
+Na Vercel o disco é só de leitura, então a plataforma usa um PostgreSQL
+hospedado (Neon) em vez do banco local.
 
-1. Suba o conteúdo desta pasta em um repositório Git (já configurado —
-   ver [github.com/lookassessoria10-collab/moveo](https://github.com/lookassessoria10-collab/moveo)).
-2. Importe o repositório em [vercel.com/new](https://vercel.com/new).
-3. Nenhuma variável de ambiente é necessária — todo o processamento de
-   câmera acontece no navegador do usuário.
-4. Build command padrão (`next build`) e output padrão do framework Next.js
-   funcionam sem configuração adicional.
+1. Projeto na Vercel importado do repositório `lookassessoria10-collab/moveoo`.
+2. **Storage → Create Database → Neon** (plano gratuito) e conecte ao
+   projeto. A Vercel cria a variável `DATABASE_URL` sozinha.
+3. **Settings → Environment Variables**, para Production (e Preview, se usar):
+   - `MOVEO_SEED_DEMO` = `1` → cria as contas fictícias no primeiro deploy;
+   - `MOVEO_DEMO_PASSWORD` = uma senha sua (mínimo de 10 caracteres) para
+     essas contas. A senha local do repositório nunca é usada na internet.
+   - **Não** defina `MOVEO_AMBIENTE` na Vercel.
+4. **Deployments → Redeploy.** O build (`vercel-build`) aplica as migrações
+   no banco e cria as contas, depois gera o site.
+
+Na Vercel não há caixa de saída nem envio de e-mail/SMS: o link e o código
+de acesso aparecem para o profissional na hora de criar o convite, e ele
+repassa à pessoa (WhatsApp para o link; o código por outro meio). Contas
+novas criadas pelo cadastro não conseguem confirmar o e-mail ainda (falta
+um provedor de e-mail) — use as contas fictícias.
+
+Antes de qualquer uso com pessoas reais, ver os itens de segurança e
+regulatórios pendentes em `docs/plataforma.md` e `docs/regulatorio/`.
 
 ## Arquitetura dos módulos
 

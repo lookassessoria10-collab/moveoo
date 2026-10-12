@@ -372,6 +372,9 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
                 { term: "Prazo", value: formatDate(d.request.dueAt) },
                 { term: "Supervisão", value: d.request.supervision === "sessao_ao_vivo" ? "Somente em sessão ao vivo" : "Sem supervisão" },
                 { term: "Protocolo", value: `${d.request.protocolId} ${d.request.protocolVersion}` },
+                ...(d.items.length
+                  ? [{ term: "Movimentos pedidos", value: d.fullProtocol ? "Protocolo completo" : d.items.map((i) => i.label).join(" · ") }]
+                  : []),
                 { term: "Objetivo", value: d.episode?.title ?? "—" },
               ]}
             />

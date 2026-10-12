@@ -308,6 +308,8 @@ export const assessmentRequests = pgTable(
       .references(() => users.id),
     protocolId: text("protocol_id").notNull(),
     protocolVersion: text("protocol_version").notNull(),
+    /** Movimentos pedidos (ids de lib/care/protocols.ts PROTOCOL_ITEMS). null = protocolo completo. */
+    selectedItems: jsonb("selected_items").$type<string[] | null>(),
     instructions: text("instructions"),
     supervision: supervisionEnum("supervision").notNull().default("sem_supervisao"),
     dueAt: ts("due_at"),

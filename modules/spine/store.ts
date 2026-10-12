@@ -92,6 +92,9 @@ interface SpineState {
   staticPosture: StaticPosture | null;
 
   queueIndex: number;
+  /** Fila desta avaliação. Padrão: todos os testes; o acompanhamento pode pedir só alguns. */
+  queue: SpineQueueItem[];
+  setQueue: (queue: SpineQueueItem[]) => void;
   pendingAttempts: SpineAttempt[];
   results: SpineTestResult[];
 
@@ -139,6 +142,8 @@ export const useSpineStore = create<SpineState>((set, get) => ({
   staticPosture: null,
 
   queueIndex: 0,
+  queue: SPINE_QUEUE,
+  setQueue: (queue) => set({ queue, queueIndex: 0 }),
   pendingAttempts: [],
   results: [],
 
@@ -154,14 +159,14 @@ export const useSpineStore = create<SpineState>((set, get) => ({
 
   currentQueueItem: () => {
     const { queueIndex } = get();
-    return SPINE_QUEUE[queueIndex] ?? null;
+    return get().queue[queueIndex] ?? null;
   },
 
   addAttempt: (attempt) => set((s) => ({ pendingAttempts: [...s.pendingAttempts, attempt] })),
 
   finalizeBlockPain: (pain) => {
     const { pendingAttempts, queueIndex } = get();
-    const item = SPINE_QUEUE[queueIndex];
+    const item = get().queue[queueIndex];
     if (!item) return;
     const maxAngles = pendingAttempts.map((a) => a.maxAngle);
     const testResult: SpineTestResult = {
@@ -211,6 +216,7 @@ export const useSpineStore = create<SpineState>((set, get) => ({
       calibration: null,
       staticPosture: null,
       queueIndex: 0,
+      queue: SPINE_QUEUE,
       pendingAttempts: [],
       results: [],
       result: null,

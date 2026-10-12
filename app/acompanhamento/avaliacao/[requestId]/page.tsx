@@ -7,7 +7,7 @@ import { consentStatus, REQUIRED_CONSENTS_FOR_CAMERA } from "@/lib/server/servic
 import { assertProtocolExecutable } from "@/lib/server/services/core";
 import { isDomainError } from "@/lib/server/errors";
 import { requirePersonScope } from "@/lib/server/session";
-import { getProtocol } from "@/lib/care/protocols";
+import { getProtocol, selectedItems } from "@/lib/care/protocols";
 
 // Telas de câmera dependem de a página não ser ampliada durante o teste.
 export const viewport: Viewport = {
@@ -54,6 +54,7 @@ export default async function RunAssessmentPage({ params }: { params: { requestI
       logo={workspace.logoUrl}
       allowDemo={workspace.environment === "demonstracao"}
       professionalName={scope.professionalName}
+      queueKeys={request.selectedItems ? selectedItems(request.protocolId, request.selectedItems).map((i) => i.moduleKey) : null}
     />
   );
 }

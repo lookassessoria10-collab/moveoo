@@ -1,48 +1,69 @@
 /**
  * Conexão com o banco.
  *
- * Desenvolvimento local: PGlite (PostgreSQL completo compilado para
- * WebAssembly, rodando dentro do processo do Node) com os dados em
- * `.data/pglite` — não exige Docker nem instalação do Postgres. O mesmo
- * schema e as mesmas migrações SQL servem para um PostgreSQL hospedado
- * (Neon, Supabase, RDS…) quando o projeto sair do ambiente local: basta
- * trocar o driver aqui (drizzle-orm/node-postgres), sem mudar os serviços.
+ * - Com DATABASE_URL (Vercel + Neon, ou qualquer PostgreSQL): driver
+ *   node-postgres. As migrações rodam no build (`npm run db:migrate`,
+ *   chamado pelo `vercel-build`), não a cada requisição.
+ * - Sem DATABASE_URL (computador local): PGlite — PostgreSQL completo em
+ *   WebAssembly, dentro do processo do Node, com os dados em `.data/pglite`.
+ *   As migrações rodam ao abrir.
  *
- * Testes usam `createTestDb()` — banco em memória, isolado por teste.
+ * O schema e as migrações SQL são os mesmos nos dois casos; os serviços
+ * não sabem qual driver está por trás.
+ *
+ * Testes usam `createTestDb()` — PGlite em memória, isolado por arquivo.
  */
 import fs from "node:fs";
 import path from "node:path";
-import { PGlite } from "@electric-sql/pglite";
-import { drizzle, type PgliteQueryResultHKT } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
-import type { PgDatabase } from "drizzle-orm/pg-core";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import * as schema from "./schema";
 
-export type Db = PgDatabase<PgliteQueryResultHKT, typeof schema>;
+export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
-const MIGRATIONS_FOLDER = path.join(process.cwd(), "db", "migrations");
+type Opened = { db: Db; close: () => Promise<void> };
 
-async function open(dataDir?: string): Promise<{ db: Db; client: PGlite }> {
+export const MIGRATIONS_FOLDER = path.join(process.cwd(), "db", "migrations");
+
+async function openPglite(dataDir?: string): Promise<Opened> {
+  const { PGlite } = await import("@electric-sql/pglite");
+  const { drizzle } = await import("drizzle-orm/pglite");
+  const { migrate } = await import("drizzle-orm/pglite/migrator");
   if (dataDir) fs.mkdirSync(path.dirname(dataDir), { recursive: true });
   const client = dataDir ? new PGlite(dataDir) : new PGlite();
-  const db = drizzle(client, { schema }) as unknown as Db;
-  await migrate(db as never, { migrationsFolder: MIGRATIONS_FOLDER });
-  return { db, client };
+  const db = drizzle(client, { schema });
+  await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
+  return { db: db as unknown as Db, close: () => client.close() };
 }
 
-// Um único PGlite por processo: o `next dev` recompila módulos e poderia
-// abrir o mesmo diretório duas vezes (o que corromperia os dados).
-const globalForDb = globalThis as unknown as { __moveoDb?: Promise<{ db: Db; client: PGlite }> };
+export async function openPostgres(url: string): Promise<Opened> {
+  const { Pool } = await import("pg");
+  const { drizzle } = await import("drizzle-orm/node-postgres");
+  // Poucas conexões por instância: na Vercel cada função tem a sua (use a URL "pooled" do Neon).
+  const pool = new Pool({ connectionString: url, max: 3 });
+  const db = drizzle(pool, { schema });
+  return { db: db as unknown as Db, close: () => pool.end() };
+}
+
+// Uma única conexão por processo: o `next dev` recompila módulos e poderia
+// abrir o mesmo diretório do PGlite duas vezes (o que corromperia os dados).
+const globalForDb = globalThis as unknown as { __moveoDb?: Promise<Opened> };
 
 export function getDb(): Promise<Db> {
   if (!globalForDb.__moveoDb) {
-    const dir = process.env.MOVEO_DB_DIR ?? path.join(process.cwd(), ".data", "pglite");
-    globalForDb.__moveoDb = open(dir);
+    const url = process.env.DATABASE_URL;
+    if (url) {
+      globalForDb.__moveoDb = openPostgres(url);
+    } else if (process.env.VERCEL) {
+      // Na Vercel o disco é só de leitura: sem banco hospedado não há como funcionar.
+      throw new Error("DATABASE_URL não configurada. Crie o banco em Vercel → Storage (Neon) e conecte ao projeto.");
+    } else {
+      const dir = process.env.MOVEO_DB_DIR ?? path.join(process.cwd(), ".data", "pglite");
+      globalForDb.__moveoDb = openPglite(dir);
+    }
   }
   return globalForDb.__moveoDb.then((x) => x.db);
 }
 
 export async function createTestDb(): Promise<{ db: Db; close: () => Promise<void> }> {
-  const { db, client } = await open();
-  return { db, close: () => client.close() };
+  return openPglite();
 }

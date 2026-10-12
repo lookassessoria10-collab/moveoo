@@ -64,7 +64,7 @@ export async function createEpisodeAction(_: ActionState, fd: FormData): Promise
 export async function createRequestAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const ctx = await getWorkspaceContext();
   return runAction(async () => {
-    const { request, url, whatsappUrl, invitation } = await createAssessmentRequest(
+    const { request, url, whatsappUrl, invitation, code } = await createAssessmentRequest(
       await getDb(),
       ctx,
       {
@@ -76,10 +76,12 @@ export async function createRequestAction(_: ActionState, fd: FormData): Promise
         dueInDays: Number(str(fd, "dueInDays") || 7),
         channel: str(fd, "channel") as "email",
         previousRequestId: str(fd, "previousRequestId") || null,
+        // Formulário sempre envia a lista marcada; vazia = nenhum movimento (o serviço recusa).
+        selectedItems: fd.has("itemsPresent") ? fd.getAll("selectedItems").map(String) : undefined,
       },
       getBaseUrl()
     );
-    return { ok: true, data: { requestId: request.id, url, whatsappUrl, channel: invitation.channel } };
+    return { ok: true, data: { requestId: request.id, url, whatsappUrl, code, channel: invitation.channel } };
   });
 }
 
@@ -87,8 +89,8 @@ export async function reissueInvitationAction(_: ActionState, fd: FormData): Pro
   const ctx = await getWorkspaceContext();
   const requestId = str(fd, "requestId");
   const res = await runAction(async () => {
-    const { url, whatsappUrl, invitation } = await reissueInvitation(await getDb(), ctx, requestId, str(fd, "channel") as "email", getBaseUrl());
-    return { ok: true, data: { url, whatsappUrl, channel: invitation.channel } };
+    const { url, whatsappUrl, invitation, code } = await reissueInvitation(await getDb(), ctx, requestId, str(fd, "channel") as "email", getBaseUrl());
+    return { ok: true, data: { url, whatsappUrl, code, channel: invitation.channel } };
   });
   revalidatePath(`/painel/avaliacoes/${requestId}`);
   return res;

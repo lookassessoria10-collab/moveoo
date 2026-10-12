@@ -1,0 +1,1 @@
+ALTER TABLE "assessment_requests" ADD COLUMN "selected_items" jsonb;

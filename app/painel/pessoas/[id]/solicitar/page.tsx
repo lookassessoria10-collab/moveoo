@@ -6,7 +6,7 @@ import { RequestForm } from "@/components/platform/CareForms";
 import { requireCareAccess } from "@/lib/server/services/authz";
 import { assertProtocolExecutable } from "@/lib/server/services/core";
 import { isDomainError } from "@/lib/server/errors";
-import { CAMERA_PROTOCOLS } from "@/lib/care/protocols";
+import { CAMERA_PROTOCOLS, protocolItems } from "@/lib/care/protocols";
 import { getWorkspaceContext, orNotFound } from "@/lib/server/session";
 
 export const metadata = { title: "Solicitar avaliação" };
@@ -43,7 +43,7 @@ export default async function RequestPage({ params, searchParams }: { params: { 
         if (!isDomainError(e)) throw e;
         blocked = e.message;
       }
-      return { id: p.id, title: p.title, capture: p.capture, blocked };
+      return { id: p.id, title: p.title, capture: p.capture, blocked, items: protocolItems(p.id).map((i) => ({ id: i.id, label: i.label })) };
     })
   );
 
@@ -74,6 +74,7 @@ export default async function RequestPage({ params, searchParams }: { params: { 
           hasPhone={!!person.phone}
           previousRequestId={previous?.id}
           fixedProtocolId={previous?.protocolId}
+          defaultItems={previous?.selectedItems ?? null}
         />
       </Panel>
     </>

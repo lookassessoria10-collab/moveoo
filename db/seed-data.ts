@@ -41,9 +41,10 @@ async function createUser(
   return user;
 }
 
-export async function seedScenario(db: Db) {
+/** `password`: no banco local, DEMO_PASSWORD; no hospedado, MOVEO_DEMO_PASSWORD (ver db/migrate.ts). */
+export async function seedScenario(db: Db, password: string = DEMO_PASSWORD) {
   await ensureConsentDocuments(db);
-  const passwordHash = await hashPassword(DEMO_PASSWORD);
+  const passwordHash = await hashPassword(password);
 
   const admin = await createUser(db, passwordHash, { email: "admin@moveo.test", name: "Administração Moveo (fictícia)", admin: true });
   const ana = await createUser(db, passwordHash, { email: "ana.fisio@moveo.test", name: "Ana Fisioterapeuta (fictícia)", profession: "fisioterapia" });

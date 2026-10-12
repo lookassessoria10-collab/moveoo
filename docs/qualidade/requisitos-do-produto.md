@@ -30,7 +30,7 @@
 | --- | --- | --- | --- | --- |
 | REQ-011 | Convite com token aleatório guardado só como hash, prazo (padrão 7, máx. 30 dias) e revogação | 15 | `invitations`, `randomToken` (256 bits), `sha256` | SW-V |
 | REQ-012 | Abrir o link não autentica, não consome o convite e não revela nome, protocolo ou dado clínico | 15, 18 | `getInvitationLanding` | SW-V |
-| REQ-013 | Confirmação por código de 6 dígitos enviado ao contato cadastrado; validade 10 min; até 5 tentativas | 4, 24.11 | `beginInvitation`, `confirmInvitation` | SW-V |
+| REQ-013 | Confirmação por código de 6 dígitos gerado com o convite, exibido só ao profissional e repassado por outro meio; válido enquanto o convite valer; até 5 tentativas | 4, 24.11 | `createInvitation`, `confirmInvitation` | SW-V |
 | REQ-014 | Sessão da pessoa restrita à solicitação do convite; revogar ou expirar o convite encerra a sessão | 15, 24.11 | `personScopeFromToken`, `requireScopedRequest` | SW-V |
 | REQ-015 | Mensagens externas sem dados clínicos e sem nome do protocolo | 12 | `inviteMessage` | SW |
 | REQ-016 | Limitar reenvio de código e tentativas por origem | 24.9 | 5 tentativas erradas por convite; no máximo um código por minuto (`codeResendSeconds = 60`). Sem limite por IP nem limite total de envios | Parcial (intervalo: SW-V) |

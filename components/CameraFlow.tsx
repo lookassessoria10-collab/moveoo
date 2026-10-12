@@ -4,7 +4,7 @@ import { CameraFallback } from "@/components/shared/FlowShell";
 import { useEffect, useRef, useState } from "react";
 import { useCamera } from "@/hooks/useCamera";
 import { usePoseLandmarker } from "@/lib/pose/usePoseLandmarker";
-import { useAssessmentStore, TEST_QUEUE } from "@/stores/assessmentStore";
+import { useAssessmentStore } from "@/stores/assessmentStore";
 import { FrameLandmarks, Movement, MovementAttempt, MovementFrame, Side } from "@/lib/types";
 import { checkPositioning, PositioningCheck } from "@/lib/positioning";
 import { calculateShoulderFlexionAngle, calculateAbductionAngle, calculateTrunkAngle } from "@/lib/angles";
@@ -61,6 +61,7 @@ export function CameraFlow() {
   const debugMode = useAssessmentStore((s) => s.debugMode);
   const toggleDebugMode = useAssessmentStore((s) => s.toggleDebugMode);
   const queueIndex = useAssessmentStore((s) => s.queueIndex);
+  const queue = useAssessmentStore((s) => s.queue);
   const calibration = useAssessmentStore((s) => s.calibration);
 
   const validationMode = useValidationMode();
@@ -138,7 +139,7 @@ export function CameraFlow() {
   // (re)inicia bloco de teste (countdown + arma a máquina de estado) quando entramos em "test"
   useEffect(() => {
     if (screen !== "test") return;
-    const item = TEST_QUEUE[queueIndex];
+    const item = queue[queueIndex];
     const baseline = useAssessmentStore.getState().calibration;
     if (!item || !baseline) return;
 
@@ -279,7 +280,7 @@ export function CameraFlow() {
    * examinador, ver finalizeValidatedRepetition).
    */
   const completeRepetition = (maxAngle: number, endTimestamp: number) => {
-    const item = TEST_QUEUE[queueIndex];
+    const item = queue[queueIndex];
     const baseline = calibration;
     if (!item || !baseline) return;
 
@@ -330,7 +331,7 @@ export function CameraFlow() {
     status: "valida" | "cancelada",
     referenceValueDeg: number | null
   ): RawFrameRecord | null => {
-    const item = TEST_QUEUE[queueIndex];
+    const item = queue[queueIndex];
     const baseline = calibration;
     if (!item || !baseline) return null;
     return {
@@ -356,7 +357,7 @@ export function CameraFlow() {
    * instante do "segure a posição" — nada foi atualizado desde então.
    */
   const handleReferenceConfirm = (referenceValue: number) => {
-    const item = TEST_QUEUE[queueIndex];
+    const item = queue[queueIndex];
     const baseline = calibration;
     if (!item || !baseline) return;
 
@@ -410,7 +411,7 @@ export function CameraFlow() {
 
   const handleTestFrame = (landmarks: FrameLandmarks | null, timestamp: number) => {
     if (!armedRef.current) return;
-    const item = TEST_QUEUE[queueIndex];
+    const item = queue[queueIndex];
     const baseline = calibration;
     if (!item || !baseline) return;
 
@@ -583,7 +584,7 @@ export function CameraFlow() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!landmarks) return;
 
-    const item = TEST_QUEUE[queueIndex];
+    const item = queue[queueIndex];
     const highlightSide = currentScreen === "test" ? item?.side ?? null : null;
 
     drawPoseOverlay(ctx, landmarks, canvas.width, canvas.height, {
@@ -603,7 +604,7 @@ export function CameraFlow() {
     { numPoses: validationMode ? 2 : 1 }
   );
 
-  const item = TEST_QUEUE[queueIndex];
+  const item = queue[queueIndex];
 
   return (
     <div className="relative flex min-h-dvh w-full flex-col bg-moveo-ink">

@@ -55,7 +55,7 @@ flowchart LR
 | FD-01 | Cadastro/acesso do profissional | Navegador → servidor → banco | Nome, e-mail, senha (vira hash scrypt), registro profissional | Bloqueio por falhas; cookie `httpOnly` |
 | FD-02 | Cadastro de pessoa e vínculo | Profissional → servidor → banco | Nome, contato, cidade/UF, objetivo do acompanhamento | Autorização por espaço e papel |
 | FD-03 | Convite | Servidor → `outbox_messages` (e-mail/SMS) ou link `wa.me` aberto pelo profissional | Nome do espaço, link com token, validade | Token só como hash na tabela de convites; **link em texto no corpo da caixa de saída** |
-| FD-04 | Confirmação | Pessoa → servidor → `outbox_messages` | Código de 6 dígitos ao contato cadastrado (canal WhatsApp usa SMS para o código) | Hash do código; 10 min; 5 tentativas; **código em texto no corpo da caixa de saída** |
+| FD-04 | Confirmação | Profissional → pessoa (fora da plataforma) → servidor | Código de 6 dígitos gerado com o convite, exibido uma vez ao profissional, que o repassa por meio diferente do link (desde 12/10/2026) | Hash do código; vale enquanto o convite valer; 5 tentativas; o código não passa pela caixa de saída |
 | FD-05 | Aceites | Pessoa → servidor → banco | Documento, versão, decisão, nome digitado | Escopo da sessão da pessoa |
 | FD-06 | Download do motor | CDN → navegador | Arquivos WASM e modelo | Versões fixas na URL; **sem verificação de integridade**; o CDN recebe IP e `User-Agent` |
 | FD-07 | Captura e cálculo | Câmera → MediaPipe → módulos (no aparelho) | Imagem e pontos do corpo em memória | Não persistidos nem enviados |

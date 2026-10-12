@@ -106,6 +106,9 @@ Identificadores são estáveis: um teste novo recebe o próximo número livre, s
 | TESTE-116 | Câmera recusada: alternativa exibida e interrupção `camera_indisponivel` registrada |
 | TESTE-117 | liberação por recurso e ambiente › segredos (links e códigos) são mascarados fora do desenvolvimento — **aprovado** (`npm test`, 04/10/2026) |
 | TESTE-118 | liberação por recurso e ambiente › decisão registrada para outro modelo/runtime não libera a versão em uso — **aprovado** |
+| TESTE-120 | convite e acesso da pessoa › o mesmo código vale para voltar depois (sessão expirada), enquanto o convite valer — **aprovado** (`npm test`, 12/10/2026) |
+| TESTE-121 | convite e acesso da pessoa › o código não vai na mensagem do convite; link do WhatsApp com 55 e sem o código — **aprovado** |
+| TESTE-122 | escolha de movimentos › resultado só com o movimento pedido; seleção inválida recusada; reavaliação repete a seleção — **aprovado** |
 | TESTE-119 | adaptModuleResult — ombro › valores impossíveis são descartados e contados (evento `medicao.valor_impossivel_descartado`) — **aprovado** |
 
 ## 3. Matriz
@@ -123,9 +126,9 @@ Identificadores são estáveis: um teste novo recebe o próximo número livre, s
 | REQ-010 | RISCO-011 | — (NI) | — | não executado |
 | REQ-011 | RISCO-012 | `invitations`, `randomToken`, `sha256` | TESTE-010 | aprovado |
 | REQ-012 | RISCO-012 | `getInvitationLanding` | TESTE-008 | aprovado |
-| REQ-013 | RISCO-012 | `beginInvitation`, `confirmInvitation` | TESTE-009 | aprovado |
+| REQ-013 | RISCO-012 | `createInvitation` (código), `confirmInvitation` | TESTE-009; TESTE-120; TESTE-121 | aprovado |
 | REQ-014 | RISCO-012 | `personScopeFromToken`, `requireScopedRequest` | TESTE-010, 011 | aprovado |
-| REQ-016 | RISCO-022 | `beginInvitation` (intervalo de 60 s entre códigos) | TESTE-052; TESTE-111 | aprovado (intervalo); não executado (limite por origem e total) |
+| REQ-016 | RISCO-022 | Sem envio de código pela plataforma desde 12/10/2026 (TESTE-052 removido: o reenvio deixou de existir) | TESTE-111 | não executado (limite por origem) |
 | REQ-017 | RISCO-007, 023 | `assertConsents` | TESTE-012 | aprovado |
 | REQ-021 | RISCO-018 | `createAssessmentRequest` | TESTE-017 | aprovado |
 | REQ-022 | RISCO-006 | `resultAdapters.ts` | TESTE-027, 031, 033 | aprovado |

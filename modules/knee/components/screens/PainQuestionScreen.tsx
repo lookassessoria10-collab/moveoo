@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { OptionList } from "@/components/ui/OptionList";
 import { PainScale } from "@/components/PainScale";
-import { useKneeStore, KNEE_QUEUE } from "../../store";
+import { useKneeStore } from "../../store";
 import { PainDuringMovement } from "@/lib/types";
 
 const MOMENT_OPTIONS: { value: NonNullable<PainDuringMovement["moment"]>; label: string }[] = [
@@ -18,18 +18,19 @@ const MOMENT_OPTIONS: { value: NonNullable<PainDuringMovement["moment"]>; label:
 
 export function PainQuestionScreen() {
   const queueIndex = useKneeStore((s) => s.queueIndex);
+  const queue = useKneeStore((s) => s.queue);
   const finalizeBlockPain = useKneeStore((s) => s.finalizeBlockPain);
   const advanceQueue = useKneeStore((s) => s.advanceQueue);
   const setScreen = useKneeStore((s) => s.setScreen);
   const buildResult = useKneeStore((s) => s.buildResult);
 
-  const item = KNEE_QUEUE[queueIndex];
+  const item = queue[queueIndex];
   const [step, setStep] = useState<"had" | "intensity" | "moment">("had");
   const [intensity, setIntensity] = useState(5);
 
   const finishBlock = (pain: PainDuringMovement) => {
     finalizeBlockPain(pain);
-    const isLast = queueIndex >= KNEE_QUEUE.length - 1;
+    const isLast = queueIndex >= queue.length - 1;
     advanceQueue();
     if (isLast) {
       setScreen("processing");

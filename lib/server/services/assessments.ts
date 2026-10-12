@@ -18,9 +18,9 @@ import {
   users,
 } from "@/db/schema";
 import { ACCESS, PLATFORM } from "@/config/platform";
-import { getProtocol, MANUAL_INSTRUMENTS, type ProtocolDefinition } from "@/lib/care/protocols";
+import { getProtocol, MANUAL_INSTRUMENTS, normalizeSelection, selectedItems, type ProtocolDefinition } from "@/lib/care/protocols";
 import { compareSessions, type ComparableMeasurement, type ReviewDecision } from "@/lib/care/comparison";
-import { randomToken, sha256 } from "../crypto";
+import { randomCode, randomToken, sha256 } from "../crypto";
 import { conflict, forbidden, invalid, notFound } from "../errors";
 import { assertProtocolExecutable, audit, sendMessage } from "./core";
 import { requireCareAccess, requireRole, type WorkspaceContext } from "./authz";
@@ -51,6 +51,8 @@ export const requestSchema = z.object({
   dueInDays: z.coerce.number().int().min(1).max(ACCESS.inviteMaxDays).default(ACCESS.inviteDefaultDays),
   channel: z.enum(["email", "sms", "whatsapp"]),
   previousRequestId: z.string().uuid().nullable().optional(),
+  /** Ids dos movimentos pedidos (PROTOCOL_ITEMS). Ausente = protocolo completo. */
+  selectedItems: z.array(z.string().max(40)).max(20).optional(),
 });
 export type RequestInput = z.input<typeof requestSchema>;
 
@@ -70,7 +72,16 @@ function contactFor(person: typeof persons.$inferSelect, channel: Channel): stri
 
 /** Mensagem do convite: discreta, sem dados clínicos, sem nome do protocolo. */
 function inviteMessage(workspaceName: string, url: string, days: number) {
-  return `${workspaceName} enviou uma atividade para você pelo ${PLATFORM.name}.\n\nAcesse: ${url}\n\nO link é pessoal e vale por ${days} dia(s).`;
+  return `${workspaceName} enviou uma atividade para você pelo ${PLATFORM.name}.\n\nAcesse: ${url}\n\nO link é pessoal e vale por ${days} dia(s). Para entrar, use o código de acesso que o profissional vai passar para você separadamente.`;
+}
+
+/**
+ * O wa.me exige o número internacional. Telefone brasileiro cadastrado só
+ * com DDD (10 ou 11 dígitos) ganha o 55 na frente.
+ */
+export function whatsappNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "").replace(/^0+/, "");
+  return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
 }
 
 async function createInvitation(
@@ -84,6 +95,10 @@ async function createInvitation(
 ) {
   const contact = contactFor(person, channel);
   const token = randomToken();
+  // Código de acesso: mostrado só ao profissional, que o repassa à pessoa por
+  // um meio diferente do link. Vale enquanto o convite valer; só o hash fica guardado.
+  const code = randomCode();
+  const expiresAt = new Date(Date.now() + days * 86_400_000);
   const [inv] = await db
     .insert(invitations)
     .values({
@@ -93,7 +108,9 @@ async function createInvitation(
       createdBy: ctx.userId,
       tokenHash: sha256(token),
       channel,
-      expiresAt: new Date(Date.now() + days * 86_400_000),
+      expiresAt,
+      codeHash: sha256(code),
+      codeExpiresAt: expiresAt,
     })
     .returning();
   const url = `${baseUrl}/convite/${token}`;
@@ -112,10 +129,8 @@ async function createInvitation(
   });
   // WhatsApp: o envio é uma ação explícita do profissional (link wa.me), sem automação.
   const whatsappUrl =
-    channel === "whatsapp"
-      ? `https://wa.me/${contact.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`
-      : null;
-  return { invitation: inv, url, whatsappUrl };
+    channel === "whatsapp" ? `https://wa.me/${whatsappNumber(contact)}?text=${encodeURIComponent(message)}` : null;
+  return { invitation: inv, url, whatsappUrl, code };
 }
 
 export async function createAssessmentRequest(db: Db, ctx: WorkspaceContext, input: RequestInput, baseUrl: string) {
@@ -140,6 +155,14 @@ export async function createAssessmentRequest(db: Db, ctx: WorkspaceContext, inp
       .where(and(eq(assessmentRequests.id, data.previousRequestId), eq(assessmentRequests.workspaceId, ctx.workspace.id)));
     if (!prev || prev.personId !== person.id) throw notFound("Avaliação anterior");
     if (prev.protocolId !== protocol.id) throw invalid("A reavaliação precisa usar o mesmo protocolo.");
+    // Reavaliação sem escolha explícita repete os mesmos movimentos da anterior.
+    if (data.selectedItems === undefined) data.selectedItems = prev.selectedItems ?? undefined;
+  }
+  let selection: string[] | null;
+  try {
+    selection = normalizeSelection(protocol.id, data.selectedItems);
+  } catch (e) {
+    throw invalid(e instanceof Error ? e.message : "Seleção de movimentos inválida.");
   }
 
   return db.transaction(async (txRaw) => {
@@ -153,6 +176,7 @@ export async function createAssessmentRequest(db: Db, ctx: WorkspaceContext, inp
         requestedBy: ctx.userId,
         protocolId: protocol.id,
         protocolVersion: protocol.version,
+        selectedItems: selection,
         instructions: data.instructions,
         supervision: data.supervision,
         dueAt: new Date(Date.now() + data.dueInDays * 86_400_000),
@@ -371,6 +395,9 @@ export async function getRequestDetail(db: Db, ctx: WorkspaceContext, requestId:
     request,
     person,
     protocol,
+    /** Movimentos pedidos (todos, se a solicitação foi do protocolo completo). */
+    items: selectedItems(request.protocolId, request.selectedItems),
+    fullProtocol: !request.selectedItems,
     requesterName: requester?.name ?? "—",
     episode,
     invitations: invites.map((i) => ({ ...i, status: invitationStatus(i) })),

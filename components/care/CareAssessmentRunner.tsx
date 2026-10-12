@@ -27,8 +27,15 @@ import type { Region } from "@/lib/care/protocols";
  *   perguntas de segurança, interrupção voluntária).
  */
 
+type QueueItem = { side?: string; movement?: string; test?: string };
 type AnyStore = {
-  getState: () => { screen: string; result: unknown; reset: () => void };
+  getState: () => {
+    screen: string;
+    result: unknown;
+    reset: () => void;
+    queue?: QueueItem[];
+    setQueue?: (queue: QueueItem[]) => void;
+  };
   subscribe: (fn: (s: { screen: string; result: unknown }) => void) => () => void;
 };
 
@@ -40,6 +47,14 @@ const MODULES: Record<Region, { Flow: () => JSX.Element; store: AnyStore }> = {
 };
 
 const RESULT_SCREENS = new Set(["results", "technicalReport", "doctorReport"]);
+
+/** Identificador de cada teste na fila do módulo (mesmo formato de PROTOCOL_ITEMS.moduleKey). */
+const QUEUE_KEY: Record<Region, (i: QueueItem) => string> = {
+  shoulder: (i) => `${i.movement}:${i.side}`,
+  knee: (i) => `${i.test}:${i.side}`,
+  spine: (i) => String(i.test),
+  posture: () => "",
+};
 
 /** Remove quadros e pontos do corpo antes de enviar (o servidor também descarta). */
 function stripFrames(value: unknown): unknown {
@@ -68,6 +83,7 @@ export function CareAssessmentRunner({
   logo,
   allowDemo,
   professionalName,
+  queueKeys,
 }: {
   requestId: string;
   region: Region;
@@ -75,6 +91,8 @@ export function CareAssessmentRunner({
   logo: string | null;
   allowDemo: boolean;
   professionalName: string;
+  /** Movimentos pedidos pelo profissional (null = todos os testes do módulo). */
+  queueKeys: string[] | null;
 }) {
   const router = useRouter();
   const { Flow, store } = MODULES[region];
@@ -102,6 +120,11 @@ export function CareAssessmentRunner({
     if (startedRef.current) return;
     startedRef.current = true;
     store.getState().reset();
+    // Só os movimentos pedidos, na ordem original do módulo.
+    const { queue, setQueue } = store.getState();
+    if (queueKeys && queue && setQueue) {
+      setQueue(queue.filter((i) => queueKeys.includes(QUEUE_KEY[region](i))));
+    }
     keyRef.current = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
     api("iniciar", { idempotencyKey: keyRef.current, device: device() })
       .then(async (r) => {

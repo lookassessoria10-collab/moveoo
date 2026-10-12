@@ -109,6 +109,7 @@ export function EpisodeForm({ personId, episodeLabel }: { personId: string; epis
 
 function InviteResult({ data }: { data: Record<string, unknown> }) {
   const url = String(data.url);
+  const code = data.code ? String(data.code) : null;
   const whatsappUrl = data.whatsappUrl ? String(data.whatsappUrl) : null;
   const [copied, setCopied] = useState(false);
   return (
@@ -116,9 +117,19 @@ function InviteResult({ data }: { data: Record<string, unknown> }) {
       <Notice tone="success" title="Convite criado">
         {data.channel === "whatsapp"
           ? "Envie o link pelo WhatsApp. A mensagem não contém dados clínicos."
-          : "O link foi enviado ao contato cadastrado (em desenvolvimento, veja a caixa de saída)."}{" "}
-        Este link aparece só agora: o sistema guarda apenas uma assinatura dele. Se perder, gere um novo.
+          : "O link foi enviado ao contato cadastrado (no computador local, veja a caixa de saída)."}{" "}
+        O link e o código aparecem só agora: o sistema guarda apenas uma assinatura deles. Se perder, gere um novo.
       </Notice>
+      {code && (
+        <div className="rounded-xl border-2 border-dashed border-moveo-primary/50 bg-white p-4 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wide text-moveo-muted">Código de acesso da pessoa</p>
+          <p className="mt-1 font-mono text-3xl font-bold tracking-[0.3em] text-moveo-ink">{code}</p>
+          <p className="mt-2 text-xs text-moveo-muted">
+            Passe este código por um meio <strong>diferente do link</strong> (pessoalmente, por ligação ou numa
+            mensagem separada). Se for junto com o link, quem receber a mensagem encaminhada consegue entrar.
+          </p>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2 rounded-xl bg-moveo-bg p-3">
         <code className="min-w-0 flex-1 break-all text-xs text-moveo-ink">{url}</code>
         <button
@@ -138,7 +149,8 @@ function InviteResult({ data }: { data: Record<string, unknown> }) {
         )}
       </div>
       <p className="text-xs text-moveo-muted">
-        A pessoa precisa confirmar um código enviado ao contato dela antes de ver a atividade.
+        Sem o código, o link sozinho não abre a atividade. Após 5 tentativas erradas o convite bloqueia e você gera
+        um novo.
       </p>
     </div>
   );
@@ -153,15 +165,18 @@ export function RequestForm({
   hasPhone,
   previousRequestId,
   fixedProtocolId,
+  defaultItems,
 }: {
   personId: string;
-  protocols: { id: string; title: string; capture: string; blocked: string | null }[];
+  protocols: { id: string; title: string; capture: string; blocked: string | null; items: { id: string; label: string }[] }[];
   episodes: { id: string; title: string }[];
   defaultChannel: string;
   hasEmail: boolean;
   hasPhone: boolean;
   previousRequestId?: string;
   fixedProtocolId?: string;
+  /** Reavaliação: movimentos pedidos na avaliação anterior (null = todos). */
+  defaultItems?: string[] | null;
 }) {
   const [state, action] = useFormState(createRequestAction, undefined);
   const [protocolId, setProtocolId] = useState(fixedProtocolId ?? protocols.find((p) => !p.blocked)?.id ?? "");
@@ -208,6 +223,30 @@ export function RequestForm({
           </label>
         ))}
       </fieldset>
+
+      {selected && selected.items.length > 0 && (
+        <fieldset key={selected.id} className="space-y-2 rounded-xl bg-moveo-bg p-4">
+          <legend className="sr-only">Movimentos</legend>
+          <input type="hidden" name="itemsPresent" value="1" />
+          <p className="text-sm font-medium text-moveo-ink">Quais movimentos pedir?</p>
+          <p className="text-xs text-moveo-muted">
+            Desmarque o que não precisa. A pessoa faz só os movimentos marcados, e o resultado traz só essas medidas.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {selected.items.map((i) => (
+              <label key={i.id} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-moveo-border">
+                <input
+                  type="checkbox"
+                  name="selectedItems"
+                  value={i.id}
+                  defaultChecked={selected.id === fixedProtocolId && defaultItems ? defaultItems.includes(i.id) : true}
+                />
+                {i.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         {episodes.length > 0 && (

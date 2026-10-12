@@ -11,7 +11,7 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     // PGlite (Postgres em WebAssembly) precisa ser carregado do node_modules, sem bundling.
-    serverComponentsExternalPackages: ["@electric-sql/pglite"],
+    serverComponentsExternalPackages: ["@electric-sql/pglite", "pg"],
   },
   async headers() {
     return [

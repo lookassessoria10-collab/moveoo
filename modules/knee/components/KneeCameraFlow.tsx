@@ -14,7 +14,7 @@ import { calculateMaxTrunkCompensation } from "@/lib/trunkCompensation";
 import { checkOrientation, checkVerticalFraming } from "@/lib/framing";
 import { KNEE_CONFIG } from "@/config/modules/knee";
 import { calculateKneeAngle, kneeFlexionFromRawAngle } from "../angles";
-import { useKneeStore, KNEE_QUEUE, KneeQueueItem } from "../store";
+import { useKneeStore, KneeQueueItem } from "../store";
 import { KneeAttempt, KneeMovementFrame, Side } from "../types";
 import { drawLegOverlay } from "@/components/PoseOverlay";
 import { PainQuestionScreen } from "./screens/PainQuestionScreen";
@@ -57,8 +57,9 @@ export function KneeCameraFlow() {
   const debugMode = useKneeStore((s) => s.debugMode);
   const toggleDebugMode = useKneeStore((s) => s.toggleDebugMode);
   const queueIndex = useKneeStore((s) => s.queueIndex);
+  const queue = useKneeStore((s) => s.queue);
   const calibration = useKneeStore((s) => s.calibration);
-  const item: KneeQueueItem | null = KNEE_QUEUE[queueIndex] ?? null;
+  const item: KneeQueueItem | null = queue[queueIndex] ?? null;
 
   const validationMode = useValidationMode();
   const validationSession = useValidationSession();

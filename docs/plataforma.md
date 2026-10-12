@@ -10,8 +10,8 @@ Ciclo verificado de ponta a ponta no navegador e por testes automatizados:
 1. Profissional cria conta (fisioterapia ou educação física, com conselho e número) → espaço de **demonstração** criado automaticamente, registro "não verificado".
 2. Confirma o e-mail (sem isso, não envia convites).
 3. Cadastra a pessoa (paciente/aluno) e o episódio/objetivo, com modalidade e a decisão sobre a adequação do remoto.
-4. Solicita avaliação (protocolo, prazo, supervisão, orientações) → convite individual por e-mail, SMS ou WhatsApp (envio manual pelo profissional).
-5. A pessoa abre o link (sem login, sem dados expostos), pede um código, confirma → sessão restrita àquela atividade.
+4. Solicita avaliação (protocolo, **movimentos e lados escolhidos**, prazo, supervisão, orientações) → convite individual por e-mail, SMS ou WhatsApp (envio manual pelo profissional) + **código de acesso de 6 dígitos mostrado só ao profissional**, que o repassa por outro meio.
+5. A pessoa abre o link (sem login, sem dados expostos) e digita o código recebido do profissional → sessão restrita àquela atividade. O código vale enquanto o convite valer; 5 erros bloqueiam o convite.
 6. Registra os aceites (atendimento a distância e uso da câmera, com versão do texto).
 7. Faz a avaliação com o módulo existente, na marca do espaço; resultado vai para o servidor, que recalcula medidas e qualidade.
 8. Profissional revisa cada medida (aceitar, corrigir com justificativa, descartar), publica a devolutiva (versionada) e pode incluir as medidas revisadas.
@@ -23,12 +23,12 @@ Ciclo verificado de ponta a ponta no navegador e por testes automatizados:
 | Decisão | Escolha | Por quê | Caminho para produção |
 | --- | --- | --- | --- |
 | Framework | Manter Next.js 14 (App Router) | Módulos de câmera já funcionam nele; Server Components + Server Actions cobrem o backend | Manter |
-| Banco | PostgreSQL via **PGlite** (Postgres em WebAssembly) em `.data/pglite` | Roda local sem Docker/instalação; mesmo SQL do Postgres hospedado | Trocar o driver em `db/client.ts` para Postgres gerenciado (região e subprocessadores a decidir) |
+| Banco | Local: **PGlite** (Postgres em WebAssembly) em `.data/pglite`. Com `DATABASE_URL`: PostgreSQL hospedado (Neon na Vercel) via node-postgres | Roda local sem instalação; o mesmo SQL e as mesmas migrações servem ao hospedado | Na Vercel, migrações e contas fictícias no build (`vercel-build` → `db/migrate.ts`). Região, subprocessadores e backup a decidir antes de uso real |
 | ORM / migrações | Drizzle (`db/schema.ts` → `db/migrations/*.sql`) | Tipos fortes, SQL explícito e revisável | Igual |
 | Autenticação | Própria: scrypt, sessão com token aleatório (só o hash no banco), cookie `httpOnly` | Sem serviço externo no ambiente local; regras auditáveis | Avaliar provedor gerenciado; **MFA obrigatório antes do atendimento real** |
 | Autorização | No servidor, em toda consulta: espaço → papel → vínculo | Identificador do navegador nunca basta | Acrescentar RLS no Postgres hospedado |
 | Isolamento no banco | Chaves estrangeiras compostas `(workspace_id, id)` | Impossível ligar registro a pessoa/solicitação de outro espaço | Igual + RLS |
-| Mensagens | Caixa de saída no banco; `/dev/caixa-de-saida` em desenvolvimento | Nada sai da máquina | Provedor de e-mail/SMS; WhatsApp só com consentimento do canal e API autorizada |
+| Mensagens | Caixa de saída no banco; `/dev/caixa-de-saida` só na hospedagem local. Código de acesso exibido ao profissional, que repassa | Sem provedor externo; link por WhatsApp com envio manual | Provedor de e-mail (confirmação de conta) e, se desejado, SMS/WhatsApp automático com consentimento do canal |
 | Câmera | Módulos existentes, no aparelho; só números e respostas vão ao servidor | Privacidade e reaproveitamento | Servir modelo da própria origem (auditoria A5) |
 | PDF | Impressão do navegador | Sem dependência nova | Geração no servidor quando houver demanda |
 
@@ -80,7 +80,7 @@ Comparação (`lib/care/comparison.ts`): só mesma grandeza + lado + unidade + m
 
 ## 6. Testes
 
-`npm test` — 100 testes (57 dos módulos originais + 43 novos). Os novos cobrem, com PostgreSQL real em memória: isolamento entre organizações (inclusive com id conhecido e pela chave composta), profissional sem vínculo, assistente sem acesso clínico, prévia de link sem autenticar, código errado/bloqueio, limite de reenvio de código, convite expirado e revogado (derruba a sessão), escopo da pessoa, aceites obrigatórios, captura insuficiente sem número, reenvio sem duplicar, revisão antes de publicar, correção preservando original, versões da devolutiva, comparação compatível/incompatível, interrupção, medição presencial identificada, espaço real exige verificação, função sem liberação bloqueada em espaço real, suspensão bloqueia até na demonstração, só administração decide liberação, demonstração recusada em espaço real, bloqueio de conta, resposta idêntica para conta inexistente, liberação presa à versão do modelo e mascaramento de segredos fora do desenvolvimento.
+`npm test` — 105 testes (57 dos módulos originais + 48 novos). Os novos cobrem, com PostgreSQL real em memória: isolamento entre organizações (inclusive com id conhecido e pela chave composta), profissional sem vínculo, assistente sem acesso clínico, prévia de link sem autenticar, código errado/bloqueio, código fora da mensagem do convite, número do WhatsApp com 55, escolha de movimentos (resultado só com o pedido, seleção inválida recusada, reavaliação repete a seleção), convite expirado e revogado (derruba a sessão), escopo da pessoa, aceites obrigatórios, captura insuficiente sem número, reenvio sem duplicar, revisão antes de publicar, correção preservando original, versões da devolutiva, comparação compatível/incompatível, interrupção, medição presencial identificada, espaço real exige verificação, função sem liberação bloqueada em espaço real, suspensão bloqueia até na demonstração, só administração decide liberação, demonstração recusada em espaço real, bloqueio de conta, resposta idêntica para conta inexistente, liberação presa à versão do modelo e mascaramento de segredos fora do desenvolvimento.
 
 Esses testes verificam software, não precisão clínica.
 

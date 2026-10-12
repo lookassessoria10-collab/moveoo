@@ -15,6 +15,13 @@
       "when": 1791157043988,
       "tag": "0001_liberacao_por_modelo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791821698418,
+      "tag": "0002_movimentos_selecionados",
+      "breakpoints": true
     }
   ]
 }

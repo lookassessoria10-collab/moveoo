@@ -13,13 +13,16 @@
     "db:seed": "tsx db/seed.ts",
     "db:reset": "tsx db/seed.ts --reset",
     "local": "next build && next start -H 0.0.0.0 -p 3000",
-    "local:start": "next start -H 0.0.0.0 -p 3000"
+    "local:start": "next start -H 0.0.0.0 -p 3000",
+    "db:migrate": "tsx db/migrate.ts",
+    "vercel-build": "tsx db/migrate.ts && next build"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.8",
     "@mediapipe/tasks-vision": "0.10.35",
     "drizzle-orm": "0.45.3",
     "next": "14.2.35",
+    "pg": "8.23.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^2.12.7",
@@ -29,6 +32,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.11",
+    "@types/pg": "8.23.1",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",

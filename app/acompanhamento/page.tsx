@@ -5,7 +5,7 @@ import { buttonClass } from "@/components/platform/ui";
 import { personLogoutAction } from "@/app/actions/person";
 import { consentStatus, REQUIRED_CONSENTS_FOR_CAMERA } from "@/lib/server/services/personAccess";
 import { requirePersonScope } from "@/lib/server/session";
-import { getProtocol } from "@/lib/care/protocols";
+import { getProtocol, selectedItems } from "@/lib/care/protocols";
 import { formatDate } from "@/lib/care/labels";
 
 export default async function PersonHome() {
@@ -36,7 +36,18 @@ export default async function PersonHome() {
       <section className="mt-6 rounded-2xl border border-moveo-border bg-white p-5 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-moveo-muted">{open ? "Para fazer" : "Atividade"}</p>
         <h2 className="mt-1 text-lg font-bold">{protocol?.shortTitle ?? "Avaliação de movimento"}</h2>
-        {protocol?.personInstructions && <p className="mt-2 text-sm text-moveo-ink">{protocol.personInstructions}</p>}
+        {request.selectedItems ? (
+          <div className="mt-2 text-sm text-moveo-ink">
+            <p>Você vai fazer só estes movimentos, até onde for confortável:</p>
+            <ul className="mt-1 list-disc pl-5">
+              {selectedItems(request.protocolId, request.selectedItems).map((i) => (
+                <li key={i.id}>{i.label}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          protocol?.personInstructions && <p className="mt-2 text-sm text-moveo-ink">{protocol.personInstructions}</p>
+        )}
         {request.instructions && (
           <div className="mt-3 rounded-xl bg-moveo-bg p-3 text-sm">
             <p className="text-xs font-semibold text-moveo-muted">Orientação de {professionalName}</p>

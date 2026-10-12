@@ -179,6 +179,85 @@ export function getProtocol(id: string): ProtocolDefinition | null {
   return (PROTOCOLS as Record<string, ProtocolDefinition>)[id] ?? null;
 }
 
+// ---------------------------------------------------------------------------
+// Movimentos que podem ser pedidos separadamente
+// ---------------------------------------------------------------------------
+
+/**
+ * Um item é a menor parte de um protocolo que o profissional pode pedir
+ * sozinha (ex.: só a flexão do ombro direito). `moduleKey` identifica o
+ * teste na fila do módulo de câmera; `metrics` lista as medidas que o
+ * item produz (grandeza + lado), para que o resultado contenha só o que
+ * foi pedido.
+ */
+export interface ProtocolItem {
+  id: string;
+  label: string;
+  moduleKey: string;
+  metrics: [string, MetricDefinition["side"]][];
+}
+
+export const PROTOCOL_ITEMS: Partial<Record<ProtocolId, ProtocolItem[]>> = {
+  "ombro-camera": [
+    { id: "flexao-direito", label: "Flexão — braço direito", moduleKey: "flexion:right", metrics: [["ombro.flexao.elevacao_media", "direito"]] },
+    { id: "flexao-esquerdo", label: "Flexão — braço esquerdo", moduleKey: "flexion:left", metrics: [["ombro.flexao.elevacao_media", "esquerdo"]] },
+    { id: "abducao-direito", label: "Elevação lateral — braço direito", moduleKey: "abduction:right", metrics: [["ombro.abducao.elevacao_media", "direito"]] },
+    { id: "abducao-esquerdo", label: "Elevação lateral — braço esquerdo", moduleKey: "abduction:left", metrics: [["ombro.abducao.elevacao_media", "esquerdo"]] },
+  ],
+  "joelho-camera": [
+    { id: "flexao-direito", label: "Flexão — joelho direito", moduleKey: "flexion:right", metrics: [["joelho.flexao.amplitude_media", "direito"]] },
+    { id: "flexao-esquerdo", label: "Flexão — joelho esquerdo", moduleKey: "flexion:left", metrics: [["joelho.flexao.amplitude_media", "esquerdo"]] },
+    {
+      id: "agachamento",
+      label: "Agachamento",
+      moduleKey: "squat:both",
+      metrics: [
+        ["joelho.agachamento.flexao_media", "bilateral"],
+        ["joelho.agachamento.assimetria_media", "bilateral"],
+      ],
+    },
+    {
+      id: "sentar-levantar",
+      label: "Sentar e levantar",
+      moduleKey: "sitToStand:both",
+      metrics: [
+        ["joelho.sentar_levantar.repeticoes", "bilateral"],
+        ["joelho.sentar_levantar.tempo_medio", "bilateral"],
+        ["joelho.sentar_levantar.apoio_maos", "bilateral"],
+      ],
+    },
+  ],
+  "coluna-camera": [
+    { id: "flexao", label: "Flexão anterior do tronco", moduleKey: "flexion", metrics: [["coluna.flexao.inclinacao_media", "nao_se_aplica"]] },
+    { id: "inclinacao-direita", label: "Inclinação lateral — direita", moduleKey: "lateralRight", metrics: [["coluna.inclinacao_lateral.inclinacao_media", "direito"]] },
+    { id: "inclinacao-esquerda", label: "Inclinação lateral — esquerda", moduleKey: "lateralLeft", metrics: [["coluna.inclinacao_lateral.inclinacao_media", "esquerdo"]] },
+    { id: "extensao", label: "Extensão do tronco", moduleKey: "extension", metrics: [["coluna.extensao.inclinacao_media", "nao_se_aplica"]] },
+  ],
+};
+
+export function protocolItems(protocolId: string): ProtocolItem[] {
+  return PROTOCOL_ITEMS[protocolId as ProtocolId] ?? [];
+}
+
+/**
+ * Normaliza a seleção recebida: só ids existentes, na ordem do protocolo.
+ * Retorna null quando a seleção cobre o protocolo inteiro (ou o protocolo
+ * não é separável). Lança erro se nenhum item válido foi escolhido.
+ */
+export function normalizeSelection(protocolId: string, selected: string[] | null | undefined): string[] | null {
+  const items = protocolItems(protocolId);
+  if (!items.length || !selected) return null;
+  const chosen = items.filter((i) => selected.includes(i.id)).map((i) => i.id);
+  if (chosen.length === 0) throw new Error("Escolha ao menos um movimento.");
+  return chosen.length === items.length ? null : chosen;
+}
+
+/** Itens efetivamente pedidos (todos, quando a seleção é null). */
+export function selectedItems(protocolId: string, selection: string[] | null | undefined): ProtocolItem[] {
+  const items = protocolItems(protocolId);
+  return selection ? items.filter((i) => selection.includes(i.id)) : items;
+}
+
 /** Instrumentos aceitos no registro presencial. */
 export const MANUAL_INSTRUMENTS = {
   goniometro: "Goniômetro",

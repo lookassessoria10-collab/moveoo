@@ -13,7 +13,7 @@
  *   quando não há tentativas; ver docs/auditoria.md.)
  */
 import { z } from "zod";
-import { getProtocol, type MetricDefinition, type ProtocolDefinition, type Region } from "./protocols";
+import { getProtocol, selectedItems, type MetricDefinition, type ProtocolDefinition, type Region } from "./protocols";
 
 // JSON transforma NaN/Infinity em null — por isso todo número é anulável.
 const num = z.number().nullable();
@@ -324,12 +324,21 @@ const ADAPTERS: Record<Region, (raw: unknown, p: ProtocolDefinition) => Omit<Ada
   posture: adaptPosture,
 };
 
-export function adaptModuleResult(protocolId: string, raw: unknown): AdaptedResult {
+/**
+ * `selection`: movimentos pedidos pelo profissional (null = protocolo
+ * completo). Medidas de movimentos não pedidos ficam fora do resultado —
+ * não aparecem como "não realizado".
+ */
+export function adaptModuleResult(protocolId: string, raw: unknown, selection: string[] | null = null): AdaptedResult {
   const protocol = getProtocol(protocolId);
   if (!protocol || protocol.kind !== "camera" || !protocol.region) {
     throw new Error(`Protocolo sem módulo de câmera: ${protocolId}`);
   }
   discardedCounter = 0;
   const adapted = ADAPTERS[protocol.region](raw, protocol);
+  if (selection) {
+    const allowed = new Set(selectedItems(protocolId, selection).flatMap((i) => i.metrics.map(([k, side]) => `${k}|${side}`)));
+    adapted.measurements = adapted.measurements.filter((m) => allowed.has(`${m.metricKey}|${m.side}`));
+  }
   return { ...adapted, discardedValues: discardedCounter };
 }

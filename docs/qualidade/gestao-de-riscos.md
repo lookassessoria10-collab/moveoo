@@ -26,7 +26,7 @@
 | RISCO-009 | Indisponibilidade | Média | Alternativa e registro de interrupção | Alto para produção |
 | RISCO-010 | Perda de dados | Alta | Transações, idempotência | Alto — sem backup |
 | RISCO-011 | Acesso indevido entre espaços ou profissionais | Alta | Autorização em três camadas + FKs compostas | Baixo-médio |
-| RISCO-012 | Acesso indevido pelo convite | Alta | Código ao contato cadastrado, escopo, prazo, revogação | Médio |
+| RISCO-012 | Acesso indevido pelo convite | Alta | Código repassado pelo profissional por outro meio, escopo, prazo, revogação | Médio |
 | RISCO-013 | Conta profissional ou administrativa comprometida | Alta | Bloqueio por tentativas; scrypt | Alto (sem MFA) |
 | RISCO-014 | Segredos persistidos na caixa de saída | Alta | Parcial: mascarados fora do desenvolvimento (TESTE-117) | Médio até existir provedor de envio |
 | RISCO-015 | Divergência de versão do runtime e dependência de CDN | Alta | Versões registradas por sessão | Médio-alto |
@@ -112,7 +112,7 @@
 
 ### RISCO-012 — Acesso indevido pelo convite
 - **Situação:** link encaminhado, interceptado ou aberto por pré-visualização.
-- **Controles:** link sozinho não autentica (TESTE-008); código ao contato cadastrado, 10 min, 5 tentativas (TESTE-009); escopo restrito à atividade (TESTE-011); expiração e revogação derrubam a sessão (TESTE-010); `Referrer-Policy: no-referrer` no link.
+- **Controles:** link sozinho não autentica (TESTE-008); código de 6 dígitos gerado com o convite e repassado pelo profissional por meio diferente do link (desde 12/10/2026), válido enquanto o convite valer, 5 tentativas (TESTE-009; TESTE-120); o código não vai na mensagem do convite (TESTE-121); escopo restrito à atividade (TESTE-011); expiração e revogação derrubam a sessão (TESTE-010); `Referrer-Policy: no-referrer` no link.
 - **Limite:** quem controla o e-mail ou o telefone da pessoa obtém o código; no canal WhatsApp, o link passa pelo aplicativo de terceiro.
 - **Residual:** médio.
 

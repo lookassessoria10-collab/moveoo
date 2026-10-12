@@ -3,23 +3,24 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { PainScale } from "@/components/PainScale";
-import { useSpineStore, SPINE_QUEUE } from "../../store";
+import { useSpineStore } from "../../store";
 import { PainDuringMovement } from "@/lib/types";
 
 export function PainQuestionScreen() {
   const queueIndex = useSpineStore((s) => s.queueIndex);
+  const queue = useSpineStore((s) => s.queue);
   const finalizeBlockPain = useSpineStore((s) => s.finalizeBlockPain);
   const advanceQueue = useSpineStore((s) => s.advanceQueue);
   const setScreen = useSpineStore((s) => s.setScreen);
   const buildResult = useSpineStore((s) => s.buildResult);
 
-  const item = SPINE_QUEUE[queueIndex];
+  const item = queue[queueIndex];
   const [step, setStep] = useState<"had" | "intensity">("had");
   const [intensity, setIntensity] = useState(5);
 
   const finishBlock = (pain: PainDuringMovement) => {
     finalizeBlockPain(pain);
-    const isLast = queueIndex >= SPINE_QUEUE.length - 1;
+    const isLast = queueIndex >= queue.length - 1;
     advanceQueue();
     if (isLast) {
       setScreen("processing");
