@@ -1,5 +1,6 @@
 "use client";
 
+import { CameraFallback } from "@/components/shared/FlowShell";
 import { useEffect, useRef, useState } from "react";
 import { useCamera } from "@/hooks/useCamera";
 import { usePoseLandmarker } from "@/lib/pose/usePoseLandmarker";
@@ -816,11 +817,7 @@ export function KneeCameraFlow() {
       </div>
 
       {(camera.status === "denied" || camera.status === "unavailable") && (
-        <div className="bg-moveo-bg p-5">
-          <Button onClick={() => useKneeStore.getState().loadDemoResult()} variant="secondary">
-            Continuar em modo demonstração
-          </Button>
-        </div>
+        <CameraFallback onDemo={() => useKneeStore.getState().loadDemoResult()} />
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { HomeLink as Link } from "@/components/shared/FlowShell";
 import { ScreenShell, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { POSTURE_CONFIG } from "@/config/modules/posture";
@@ -78,7 +78,7 @@ export function ResultsScreen() {
         <Button variant="ghost" onClick={reset}>
           REFAZER CAPTURA
         </Button>
-        <Link href="/" className="block">
+        <Link className="block">
           <Button variant="ghost">AVALIAR OUTRA REGIÃO</Button>
         </Link>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useFlowShell } from "@/components/shared/FlowShell";
 
 function readFromUrl(): boolean {
   if (typeof window === "undefined") return false;
@@ -18,9 +19,10 @@ function readFromUrl(): boolean {
  * (no servidor sempre retorna `false`, corrigido logo após montar).
  */
 export function useValidationMode(): boolean {
+  const { allowValidation } = useFlowShell();
   const [active, setActive] = useState(false);
   useEffect(() => {
     setActive(readFromUrl());
   }, []);
-  return active;
+  return active && allowValidation;
 }

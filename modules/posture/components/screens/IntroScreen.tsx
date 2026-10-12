@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { HomeLink as Link } from "@/components/shared/FlowShell";
 import { ScreenShell } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { warmUpSpeech } from "@/lib/useSpeech";
@@ -19,7 +19,7 @@ export function IntroScreen() {
   return (
     <ScreenShell className="justify-between">
       <div>
-        <Link href="/" className="text-sm text-moveo-muted">
+        <Link className="text-sm text-moveo-muted">
           ← Voltar
         </Link>
         <h1 className="mt-3 text-2xl font-bold text-moveo-ink">Postura sentada</h1>

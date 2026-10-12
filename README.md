@@ -1,4 +1,45 @@
-# UORT — Análise de Movimento por câmera
+# Moveo — acompanhamento de movimento para fisioterapia e educação física
+
+Plataforma em que o profissional cadastra quem atende, envia avaliações
+pelo celular da pessoa, revisa cada resultado antes de publicar e compara
+reavaliações. A pessoa atendida acessa por um convite individual, sem
+aplicativo. **Em desenvolvimento, apenas com dados fictícios** — as
+medidas por câmera não têm validação clínica nem liberação para uso real.
+
+- Arquitetura, modelo de dados, telas e próximos passos: [`docs/plataforma.md`](docs/plataforma.md)
+- Auditoria do código herdado (inclui achados de precisão): [`docs/auditoria.md`](docs/auditoria.md)
+- Documentação regulatória, qualidade, privacidade e PI: `docs/regulatorio`, `docs/qualidade`, `docs/privacidade`, `docs/seguranca`, `docs/validacao`, `docs/propriedade-intelectual`
+
+## Rodar a plataforma localmente
+
+```bash
+npm install
+npm run db:reset   # cria .data/pglite (PostgreSQL embutido) com o cenário fictício
+npm run dev
+```
+
+- `http://localhost:3000` — página institucional; `/entrar` — área do profissional.
+- Contas fictícias: `ana.fisio@moveo.test` (gestora, fisioterapia), `bruno.fisio@moveo.test`, `carla.recepcao@moveo.test` (assistente), `diego.ef@moveo.test` (educação física, outro espaço), `admin@moveo.test` (administração). Senha: `DEMO_PASSWORD` em [`db/seed-data.ts`](db/seed-data.ts).
+- Nada é enviado de verdade: convites, códigos e confirmações aparecem em `http://localhost:3000/dev/caixa-de-saida`.
+- Pare o `npm run dev` antes de `npm run db:reset` (o banco local não aceita dois processos).
+
+### Hospedar nesta máquina (versão otimizada)
+
+```bash
+npm run local        # gera o build e sobe em http://localhost:3000
+npm run local:start  # só sobe (quando o build já existe)
+```
+
+Requer o arquivo `.env.local` com `MOVEO_AMBIENTE=local` (modelo em `.env.example`; o arquivo não vai para o Git). Nesse modo a caixa de saída continua visível e o login funciona pela rede Wi-Fi sem HTTPS: no celular, abra `http://<IP-do-computador>:3000` (o Windows pode pedir para liberar o Node.js no firewall de rede privada). Para os links de convite funcionarem no celular, abra o painel pelo IP da rede (não por `localhost`) ou defina `MOVEO_BASE_URL`. A câmera do celular só funciona com HTTPS — pela rede local sem HTTPS, a pessoa consegue entrar e aceitar, mas a captura cai na opção "avisar o profissional".
+- `npm test` roda os testes (inclui isolamento entre organizações com PostgreSQL em memória); `npm run typecheck` confere os tipos; `npm run db:generate` gera migração após mudar `db/schema.ts`.
+
+---
+
+# Módulos de avaliação (herdados da UORT)
+
+Os quatro módulos abaixo continuam disponíveis como **avaliação livre** em
+`/assessment` (marca UORT) e são reaproveitados, sem mudança de cálculo,
+dentro do acompanhamento da plataforma.
 
 Aplicação web mobile-first que usa apenas a câmera do celular (via
 MediaPipe Pose Landmarker, rodando inteiramente no navegador) para medir
@@ -25,7 +66,7 @@ experimentais da plataforma ficam centralizados em
 [`config/app.ts`](config/app.ts); cada módulo tem sua própria configuração
 em `config/modules/<região>.ts`.
 
-## Como instalar e rodar
+## Testar os módulos no celular
 
 ```bash
 npm install
@@ -42,6 +83,13 @@ necessário publicar em HTTPS (ex.: Vercel) ou usar um túnel HTTPS (ex.:
 
 ## Como publicar na Vercel
 
+> **Atenção — vale só para a versão antiga, sem a plataforma.** A
+> plataforma usa um PostgreSQL embutido (PGlite) que grava em disco local;
+> em hospedagem serverless esse disco é temporário e os dados se perdem.
+> Antes de publicar a plataforma é preciso trocar para um PostgreSQL
+> gerenciado (ver `docs/plataforma.md`, seção 2) e cumprir os itens de
+> segurança e regulatórios pendentes. Não publique esta branch como está.
+
 1. Suba o conteúdo desta pasta em um repositório Git (já configurado —
    ver [github.com/lookassessoria10-collab/moveo](https://github.com/lookassessoria10-collab/moveo)).
 2. Importe o repositório em [vercel.com/new](https://vercel.com/new).
@@ -50,11 +98,11 @@ necessário publicar em HTTPS (ex.: Vercel) ou usar um túnel HTTPS (ex.:
 4. Build command padrão (`next build`) e output padrão do framework Next.js
    funcionam sem configuração adicional.
 
-## Arquitetura da plataforma
+## Arquitetura dos módulos
 
 ```
 app/
-  page.tsx                    → Home: seleção de região (RegionSelectScreen)
+  assessment/page.tsx         → seleção de região da avaliação livre (RegionSelectScreen)
   assessment/
     shoulder/page.tsx         → módulo Ombro
     knee/page.tsx             → módulo Joelho
@@ -141,7 +189,7 @@ convenção pedida para o crescimento da plataforma.
 
 - Usa `@mediapipe/tasks-vision` (`PoseLandmarker`), carregado no navegador
   a partir de CDNs públicas (`jsdelivr` para o runtime wasm,
-  `storage.googleapis.com` para o modelo `pose_landmarker_lite`).
+  `storage.googleapis.com` para o modelo `pose_landmarker_full`).
 - A detecção roda em `runningMode: "VIDEO"`, chamando `detectForVideo` a
   cada frame dentro de um loop de `requestAnimationFrame`.
 - O eixo X é espelhado na conversão dos landmarks porque o vídeo é exibido

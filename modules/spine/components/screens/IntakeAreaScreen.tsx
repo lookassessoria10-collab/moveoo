@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { HomeLink as Link } from "@/components/shared/FlowShell";
 import { ScreenShell } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { OptionList } from "@/components/ui/OptionList";
@@ -25,7 +25,7 @@ export function IntakeAreaScreen() {
   return (
     <ScreenShell className="justify-between">
       <div>
-        <Link href="/" className="text-sm text-moveo-muted">
+        <Link className="text-sm text-moveo-muted">
           ← Voltar
         </Link>
         <h1 className="mt-3 text-2xl font-bold text-moveo-ink">Onde está o incômodo principal?</h1>

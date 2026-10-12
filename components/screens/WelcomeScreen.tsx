@@ -5,10 +5,12 @@ import { ScreenShell } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { APP_CONFIG } from "@/config/app";
 import { useAssessmentStore } from "@/stores/assessmentStore";
+import { BrandMark, useFlowShell } from "@/components/shared/FlowShell";
 
 export function WelcomeScreen() {
   const setScreen = useAssessmentStore((s) => s.setScreen);
   const loadDemoResult = useAssessmentStore((s) => s.loadDemoResult);
+  const { allowDemo } = useFlowShell();
 
   // calculado só após montar no cliente, para evitar divergência entre
   // a renderização no servidor (sem `navigator`) e no navegador
@@ -21,17 +23,7 @@ export function WelcomeScreen() {
     <ScreenShell className="justify-between">
       <div>
         <div className="mb-8 flex items-center">
-          {APP_CONFIG.logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={APP_CONFIG.logo} alt={APP_CONFIG.name} className="h-11 w-auto" />
-          ) : (
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-moveo-primary text-lg font-bold text-white">
-                {APP_CONFIG.name.slice(0, 1)}
-              </div>
-              <span className="text-lg font-bold tracking-tight">{APP_CONFIG.name}</span>
-            </div>
-          )}
+          <BrandMark />
         </div>
 
         <h1 className="text-3xl font-bold leading-tight text-moveo-ink">
@@ -50,7 +42,7 @@ export function WelcomeScreen() {
 
       <div className="mt-10 space-y-3">
         <Button onClick={() => setScreen("symptomSide")}>INICIAR AVALIAÇÃO</Button>
-        {noCameraOnDesktop && (
+        {noCameraOnDesktop && allowDemo && (
           <Button variant="secondary" onClick={loadDemoResult}>
             Ver modo demonstração
           </Button>

@@ -1,14 +1,13 @@
 import { FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
+import { POSE_MODEL_URL, POSE_WASM_BASE } from "./modelInfo";
 
-const WASM_BASE =
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.17/wasm";
+const WASM_BASE = POSE_WASM_BASE;
 // "full" em vez de "lite": mais preciso para rastrear pernas e vistas de
 // perfil (joelho e coluna), que a variante "lite" tratava com bastante
 // ruído/erro de estimativa ("alucinação" de landmarks fora do quadro).
 // Continua rodando em tempo real no dispositivo, só um pouco mais pesado
 // que "lite".
-const MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
+const MODEL_URL = POSE_MODEL_URL;
 
 let filesetCache: ReturnType<typeof FilesetResolver.forVisionTasks> | null = null;
 const landmarkerCache = new Map<number, Promise<PoseLandmarker>>();

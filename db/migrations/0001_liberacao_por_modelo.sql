@@ -1,0 +1,1 @@
+ALTER TABLE "feature_releases" ADD COLUMN "model_version" text DEFAULT '' NOT NULL;
