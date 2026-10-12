@@ -32,7 +32,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <PanelNav
             vertical={false}
             links={[
-              { href: "/admin", label: "Verificação profissional", exact: true },
+              { href: "/admin", label: "Visão geral", exact: true },
+              { href: "/admin/usuarios", label: "Usuários" },
+              { href: "/admin/verificacao", label: "Verificação profissional" },
               { href: "/admin/liberacoes", label: "Liberação por recurso" },
               { href: "/admin/espacos", label: "Espaços" },
               { href: "/admin/auditoria", label: "Auditoria" },

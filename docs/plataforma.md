@@ -18,6 +18,7 @@ Ciclo verificado de ponta a ponta no navegador e por testes automatizados:
 9. A pessoa vê o retorno. O profissional solicita reavaliação; a comparação explica incompatibilidades.
 10. Também: medição presencial (goniômetro, inclinômetro…), relatório para impressão/PDF, painel "Hoje", equipe e vínculos, administração (verificação manual, liberação por recurso, auditoria).
 11. Tutorial de boas-vindas no painel: pop-ups em passos que explicam o ciclo principal e destacam no menu onde fica cada coisa (`components/platform/Tutorial.tsx`, textos em `tutorialSteps.tsx`). Abre sozinho na primeira visita a "Hoje" de uma conta nova; concluir, pular ou fechar grava `users.tutorial_seen_at`. Reabre pelo botão "Como funciona", no menu. Os passos seguem a profissão (paciente/aluno) e o papel (assistente não vê os passos de avaliação). Contas que já existiam quando a coluna foi criada ficaram marcadas como vistas.
+12. Gestão de usuários pela administração (`lib/server/services/adminUsers.ts`): visão geral com números da base (contas, novas, ativas em 30 dias, verificação pendente, cadastros por semana, funil conta → pessoa → avaliação solicitada → realizada → devolutiva, por profissão e UF), lista com busca e filtros, planilha CSV (Excel em português), ficha com edição da conta e do registro (mudar o registro volta a verificação para pendente), confirmar e-mail e destravar acesso manualmente, dar/remover acesso de administração, etiquetas e anotações internas. **Desativar** bloqueia o acesso e derruba as sessões, sem apagar nada; **excluir definitivamente** só contas sem nenhum registro de atendimento ou decisão (a ficha lista o que impede). Ninguém desativa, exclui ou tira o próprio acesso de administração. Tudo vai para a auditoria, sem nome, e-mail ou texto livre na metadata.
 
 ## 2. Decisões técnicas
 
@@ -75,7 +76,7 @@ Comparação (`lib/care/comparison.ts`): só mesma grandeza + lado + unidade + m
 | Avaliação livre (UORT) | `/assessment`, `/assessment/{shoulder,knee,spine,posture}` | Preservado |
 | Profissional | `/painel` (Hoje), `/painel/pessoas`, `/painel/pessoas/nova`, `/painel/pessoas/[id]`, `.../solicitar`, `.../medicao-presencial`, `.../vinculos`, `/painel/avaliacoes/[id]`, `.../relatorio`, `/painel/equipe`, `/painel/espaco`, `/painel/perfil`, `/novo-espaco` | Pronto |
 | Pessoa atendida | `/convite/[token]`, `/acompanhamento`, `/acompanhamento/consentimento`, `/acompanhamento/avaliacao/[id]`, `/acompanhamento/retorno`, `/acompanhamento/sem-acesso` | Pronto |
-| Administração | `/admin` (verificação), `/admin/liberacoes`, `/admin/espacos`, `/admin/auditoria` | Pronto |
+| Administração | `/admin` (visão geral: números e funil), `/admin/usuarios` (+ `/[id]` e `/exportar`), `/admin/verificacao`, `/admin/liberacoes`, `/admin/espacos`, `/admin/auditoria` | Pronto |
 | Desenvolvimento | `/dev/caixa-de-saida` (só fora de produção) | Pronto |
 | Planejado | programas e biblioteca de exercícios, vídeos e revisão, mensagens, agenda, lembretes, solicitações de titulares, planos | Próximas etapas |
 

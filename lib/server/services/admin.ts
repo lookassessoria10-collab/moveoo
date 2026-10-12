@@ -11,14 +11,15 @@ import { CAMERA_PROTOCOLS } from "@/lib/care/protocols";
 import { forbidden, invalid } from "../errors";
 import { audit, FEATURES, getReleaseState, RELEASE_MODEL_VERSION } from "./core";
 
-async function requireAdmin(db: Db, userId: string) {
+/** Conta de administração da plataforma, ativa. Toda função de administração começa por aqui. */
+export async function assertPlatformAdmin(db: Db, userId: string) {
   const [u] = await db.select().from(users).where(eq(users.id, userId));
   if (!u?.isPlatformAdmin || u.disabledAt) throw forbidden("Área restrita à administração da plataforma.");
   return u;
 }
 
 export async function listProfessionals(db: Db, adminId: string) {
-  await requireAdmin(db, adminId);
+  await assertPlatformAdmin(db, adminId);
   return db
     .select({
       userId: users.id,
@@ -41,7 +42,7 @@ export const verificationSchema = z.object({
 
 /** Conferência MANUAL registrada (fonte, data, responsável). Não há integração automática com conselhos. */
 export async function decideVerification(db: Db, adminId: string, input: z.input<typeof verificationSchema>) {
-  await requireAdmin(db, adminId);
+  await assertPlatformAdmin(db, adminId);
   const data = verificationSchema.parse(input);
   await db
     .update(professionalProfiles)
@@ -64,7 +65,7 @@ export async function decideVerification(db: Db, adminId: string, input: z.input
 }
 
 export async function listReleaseOverview(db: Db, adminId: string) {
-  await requireAdmin(db, adminId);
+  await assertPlatformAdmin(db, adminId);
   const current = [];
   for (const p of CAMERA_PROTOCOLS) {
     const versions = { algorithmVersion: p.algorithmVersion!, protocolVersion: p.version };
@@ -95,7 +96,7 @@ export const releaseSchema = z.object({
  * (docs/regulatorio/criterios-de-liberacao.md).
  */
 export async function recordReleaseDecision(db: Db, adminId: string, input: z.input<typeof releaseSchema>) {
-  await requireAdmin(db, adminId);
+  await assertPlatformAdmin(db, adminId);
   const data = releaseSchema.parse(input);
   const protocol = CAMERA_PROTOCOLS.find((p) => p.featureKey === data.featureKey);
   if (!protocol) throw invalid("Recurso sem protocolo correspondente.");
@@ -116,7 +117,7 @@ export async function recordReleaseDecision(db: Db, adminId: string, input: z.in
 }
 
 export async function listWorkspacesForAdmin(db: Db, adminId: string) {
-  await requireAdmin(db, adminId);
+  await assertPlatformAdmin(db, adminId);
   return db
     .select({
       workspace: workspaces,
@@ -127,6 +128,6 @@ export async function listWorkspacesForAdmin(db: Db, adminId: string) {
 }
 
 export async function listAuditEvents(db: Db, adminId: string, limit = 200) {
-  await requireAdmin(db, adminId);
+  await assertPlatformAdmin(db, adminId);
   return db.select().from(auditEvents).orderBy(desc(auditEvents.at)).limit(limit);
 }

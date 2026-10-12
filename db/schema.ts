@@ -20,6 +20,7 @@ import {
   index,
   integer,
   jsonb,
+  primaryKey,
   pgEnum,
   pgTable,
   real,
@@ -84,7 +85,9 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   emailVerifiedAt: ts("email_verified_at"),
   isPlatformAdmin: boolean("is_platform_admin").notNull().default(false),
+  /** Conta desativada pela administração: sem acesso, histórico preservado (reativável). */
   disabledAt: ts("disabled_at"),
+  disabledReason: text("disabled_reason"),
   failedLoginCount: integer("failed_login_count").notNull().default(0),
   lockedUntil: ts("locked_until"),
   /** Tutorial de boas-vindas do painel concluído ou pulado (nulo = abre sozinho na próxima visita). */
@@ -556,3 +559,36 @@ export const outboxMessages = pgTable("outbox_messages", {
   body: text("body").notNull(),
   createdAt: createdAt(),
 });
+
+// ---------------------------------------------------------------------------
+// Gestão de usuários pela administração da plataforma (uso interno)
+// ---------------------------------------------------------------------------
+// Nunca aparecem para o próprio usuário. Sem conteúdo clínico: servem para
+// organizar a base (ex.: "beta", "lead", "parceiro", "teste").
+
+export const userAdminTags = pgTable(
+  "user_admin_tags",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tag: text("tag").notNull(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.tag] }), index("user_admin_tags_tag_idx").on(t.tag)]
+);
+
+export const userAdminNotes = pgTable(
+  "user_admin_notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
+    body: text("body").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("user_admin_notes_user_idx").on(t.userId)]
+);

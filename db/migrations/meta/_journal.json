@@ -29,6 +29,13 @@
       "when": 1791839041330,
       "tag": "0003_tutorial_boas_vindas",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791843710292,
+      "tag": "0004_gestao_de_usuarios",
+      "breakpoints": true
     }
   ]
 }
